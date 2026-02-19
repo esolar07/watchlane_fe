@@ -1,4 +1,4 @@
-import { Organization, OrganizationDetail, CreateOrganizationPayload } from "@/types/organization";
+import { Organization, OrganizationDetail, CreateOrganizationPayload, UpdateOrganizationPayload } from "@/types/organization";
 import { DashboardSummary } from "@/types/dashboard";
 import { MeResponse } from "@/types/auth";
 
@@ -30,6 +30,31 @@ export async function getOrganizations(): Promise<OrganizationDetail[]> {
   });
   if (!res.ok) {
     throw new Error("Failed to fetch organizations");
+  }
+  return res.json();
+}
+
+export async function getOrganization(id: string): Promise<OrganizationDetail> {
+  const res = await fetch(`${BASE_URL}/api/organizations/${id}`, {
+    credentials: "include",
+  });
+  if (!res.ok) {
+    if (res.status === 404) throw new Error("Organization not found");
+    throw new Error("Failed to fetch organization");
+  }
+  return res.json();
+}
+
+export async function updateOrganization(id: string, payload: UpdateOrganizationPayload): Promise<OrganizationDetail> {
+  const res = await fetch(`${BASE_URL}/api/organizations/${id}`, {
+    method: "PUT",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => null);
+    throw new Error(body?.message ?? "Failed to update organization");
   }
   return res.json();
 }

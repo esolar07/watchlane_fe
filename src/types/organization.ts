@@ -11,6 +11,7 @@ export interface OrganizationDetail {
   planTier: string;
   role: string;
   createdAt: string;
+  settings: OrganizationSettings;
 }
 
 export interface OrganizationSettings {
@@ -25,4 +26,9 @@ export interface CreateOrganizationPayload {
   name: string;
   role: string;
   settings: OrganizationSettings;
+}
+
+export interface UpdateOrganizationPayload {
+  name?: string;
+  settings?: Partial<OrganizationSettings>;
 }

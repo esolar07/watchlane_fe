@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, type FormEvent } from "react";
+import { useRouter } from "next/navigation";
 import { Building2, Plus, Crown, Shield, User, Mail, Clock } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import {
@@ -26,8 +27,8 @@ import {
   getOrganizations,
   createOrganization,
   getAuthMailboxUrl,
-  type OrganizationDetail,
 } from "@/services/api";
+import type { OrganizationDetail } from "@/types/organization";
 
 const roleIcons: Record<string, typeof Crown> = {
   OWNER: Crown,
@@ -44,6 +45,7 @@ function formatDate(dateString: string) {
 }
 
 export default function OrganizationsPage() {
+  const router = useRouter();
   const [orgs, setOrgs] = useState<OrganizationDetail[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -315,7 +317,11 @@ export default function OrganizationsPage() {
         {orgs.map((org) => {
           const RoleIcon = roleIcons[org.role] ?? User;
           return (
-            <Card key={org.id} className="transition-shadow hover:shadow-md">
+            <Card
+              key={org.id}
+              className="cursor-pointer transition-shadow hover:shadow-md"
+              onClick={() => router.push(`/organizations/${org.id}`)}
+            >
               <CardHeader className="flex flex-row items-start justify-between space-y-0">
                 <div className="flex items-center gap-3">
                   <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
@@ -345,7 +351,10 @@ export default function OrganizationsPage() {
                     size="sm"
                     className="w-full"
                     disabled={connectingOrgId === org.id}
-                    onClick={() => handleConnectMailbox(org.id)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleConnectMailbox(org.id);
+                    }}
                   >
                     {connectingOrgId === org.id ? (
                       <span className="flex items-center gap-2">
