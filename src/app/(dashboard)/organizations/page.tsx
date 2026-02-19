@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState, type FormEvent } from "react";
-import { Building2, Plus, Crown, Shield, User, Mail } from "lucide-react";
+import { Building2, Plus, Crown, Shield, User, Mail, Clock } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
 import {
   Card,
   CardContent,
@@ -47,6 +48,8 @@ export default function OrganizationsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [name, setName] = useState("");
+  const [slaEnabled, setSlaEnabled] = useState(true);
+  const [slaMinutes, setSlaMinutes] = useState(120);
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [connectingOrgId, setConnectingOrgId] = useState<string | null>(null);
@@ -69,7 +72,17 @@ export default function OrganizationsPage() {
     setError("");
     setIsSubmitting(true);
     try {
-      const newOrg = await createOrganization(trimmed);
+      const newOrg = await createOrganization({
+        name: trimmed,
+        role: "OWNER",
+        settings: {
+          slaMinutes,
+          slaEnabled,
+          weeklyReportEnabled: false,
+          weeklyReportDay: null,
+          notifyOnBreach: false,
+        },
+      });
       setOrgs((prev) => [
         ...prev,
         {
@@ -79,6 +92,8 @@ export default function OrganizationsPage() {
         },
       ]);
       setName("");
+      setSlaEnabled(true);
+      setSlaMinutes(120);
       setDialogOpen(false);
     } catch (err) {
       setError(
@@ -103,6 +118,8 @@ export default function OrganizationsPage() {
     setDialogOpen(open);
     if (!open) {
       setName("");
+      setSlaEnabled(true);
+      setSlaMinutes(120);
       setError("");
     }
   }
@@ -132,23 +149,58 @@ export default function OrganizationsPage() {
                 with your team.
               </p>
             </div>
-            <form onSubmit={handleCreate} className="w-full space-y-3">
-              <div className="grid gap-2 text-left">
-                <Label htmlFor="org-name">Organization name</Label>
-                <Input
-                  id="org-name"
-                  placeholder="e.g. Acme Corp"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  disabled={isSubmitting}
-                  autoFocus
-                />
-                {error && (
-                  <p className="text-sm text-destructive" role="alert">
-                    {error}
-                  </p>
+            <form onSubmit={handleCreate} className="w-full space-y-5 text-left">
+              <div className="space-y-3">
+                <h4 className="text-sm font-medium text-muted-foreground">Organization Details</h4>
+                <div className="grid gap-2">
+                  <Label htmlFor="org-name">Organization name</Label>
+                  <Input
+                    id="org-name"
+                    placeholder="e.g. Acme Corp"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    disabled={isSubmitting}
+                    autoFocus
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-3 border-t pt-4">
+                <h4 className="text-sm font-medium text-muted-foreground">SLA Settings</h4>
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="sla-enabled">Enable SLA tracking</Label>
+                  <Switch
+                    id="sla-enabled"
+                    checked={slaEnabled}
+                    onCheckedChange={setSlaEnabled}
+                    disabled={isSubmitting}
+                  />
+                </div>
+                {slaEnabled && (
+                  <div className="grid gap-2">
+                    <Label htmlFor="sla-minutes">SLA response time (minutes)</Label>
+                    <div className="relative">
+                      <Clock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                      <Input
+                        id="sla-minutes"
+                        type="number"
+                        min={1}
+                        placeholder="120"
+                        value={slaMinutes}
+                        onChange={(e) => setSlaMinutes(Number(e.target.value))}
+                        disabled={isSubmitting}
+                        className="pl-9"
+                      />
+                    </div>
+                  </div>
                 )}
               </div>
+
+              {error && (
+                <p className="text-sm text-destructive" role="alert">
+                  {error}
+                </p>
+              )}
               <Button type="submit" disabled={isSubmitting} className="w-full">
                 {isSubmitting ? (
                   <span className="flex items-center gap-2">
@@ -190,23 +242,58 @@ export default function OrganizationsPage() {
                 members.
               </DialogDescription>
             </DialogHeader>
-            <form onSubmit={handleCreate} className="grid gap-4">
-              <div className="grid gap-2">
-                <Label htmlFor="new-org-name">Organization name</Label>
-                <Input
-                  id="new-org-name"
-                  placeholder="e.g. Acme Corp"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  disabled={isSubmitting}
-                  autoFocus
-                />
-                {error && (
-                  <p className="text-sm text-destructive" role="alert">
-                    {error}
-                  </p>
+            <form onSubmit={handleCreate} className="grid gap-5">
+              <div className="space-y-3">
+                <h4 className="text-sm font-medium text-muted-foreground">Organization Details</h4>
+                <div className="grid gap-2">
+                  <Label htmlFor="new-org-name">Organization name</Label>
+                  <Input
+                    id="new-org-name"
+                    placeholder="e.g. Acme Corp"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    disabled={isSubmitting}
+                    autoFocus
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-3 border-t pt-4">
+                <h4 className="text-sm font-medium text-muted-foreground">SLA Settings</h4>
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="dialog-sla-enabled">Enable SLA tracking</Label>
+                  <Switch
+                    id="dialog-sla-enabled"
+                    checked={slaEnabled}
+                    onCheckedChange={setSlaEnabled}
+                    disabled={isSubmitting}
+                  />
+                </div>
+                {slaEnabled && (
+                  <div className="grid gap-2">
+                    <Label htmlFor="dialog-sla-minutes">SLA response time (minutes)</Label>
+                    <div className="relative">
+                      <Clock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                      <Input
+                        id="dialog-sla-minutes"
+                        type="number"
+                        min={1}
+                        placeholder="120"
+                        value={slaMinutes}
+                        onChange={(e) => setSlaMinutes(Number(e.target.value))}
+                        disabled={isSubmitting}
+                        className="pl-9"
+                      />
+                    </div>
+                  </div>
                 )}
               </div>
+
+              {error && (
+                <p className="text-sm text-destructive" role="alert">
+                  {error}
+                </p>
+              )}
               <DialogFooter>
                 <Button type="submit" disabled={isSubmitting}>
                   {isSubmitting ? (

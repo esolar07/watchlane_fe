@@ -1,30 +1,8 @@
+import { Organization, OrganizationDetail, CreateOrganizationPayload } from "@/types/organization";
+import { DashboardSummary } from "@/types/dashboard";
+import { MeResponse } from "@/types/auth";
+
 const BASE_URL = process.env.NEXT_PUBLIC_WATCHLANE_BASE_API;
-
-export interface Organization {
-  id: string;
-  name: string;
-  role: string;
-}
-
-export interface OrganizationDetail {
-  id: string;
-  name: string;
-  planTier: string;
-  role: string;
-  createdAt: string;
-}
-
-export interface DashboardSummary {
-  coveredCount: number;
-  uncoveredCount: number;
-  avgResponseTimeMinutes: number;
-  oldestUncoveredMinutes: number;
-}
-
-interface MeResponse {
-  user: { id: string; name: string; email: string; avatarUrl?: string };
-  organizations: Organization[];
-}
 
 export async function getMe(): Promise<MeResponse> {
   const res = await fetch(`${BASE_URL}/api/auth/me`, {
@@ -56,12 +34,12 @@ export async function getOrganizations(): Promise<OrganizationDetail[]> {
   return res.json();
 }
 
-export async function createOrganization(name: string): Promise<Organization> {
+export async function createOrganization(payload: CreateOrganizationPayload): Promise<Organization> {
   const res = await fetch(`${BASE_URL}/api/organizations`, {
     method: "POST",
     credentials: "include",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ name }),
+    body: JSON.stringify(payload),
   });
   if (!res.ok) {
     const body = await res.json().catch(() => null);
