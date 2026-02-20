@@ -9,10 +9,13 @@ import {
   Clock,
   Copy,
   Crown,
+  Mail,
+  MailX,
   Pencil,
   RefreshCw,
   Shield,
   User,
+  Users,
   Link,
 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
@@ -347,6 +350,74 @@ export default function OrganizationDetailPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Team Members Card — OWNER/ADMIN only */}
+      {canEdit && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base flex items-center gap-2">
+              <Users className="h-4 w-4" />
+              Team Members
+            </CardTitle>
+            <CardDescription>
+              People who belong to this organization.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {!org.members || org.members.length === 0 ? (
+              <div className="flex flex-col items-center gap-2 py-6 text-center">
+                <Users className="h-8 w-8 text-muted-foreground" />
+                <p className="text-sm text-muted-foreground">
+                  No members yet. Share the invite link to add team members.
+                </p>
+              </div>
+            ) : (
+              <div className="divide-y">
+                {org.members.map((member) => {
+                  const MemberRoleIcon = roleIcons[member.role] ?? User;
+                  return (
+                    <div
+                      key={member.email}
+                      className="flex items-center justify-between py-3 first:pt-0 last:pb-0"
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-muted">
+                          <User className="h-4 w-4 text-muted-foreground" />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium truncate">
+                            {member.name}
+                          </p>
+                          <p className="text-xs text-muted-foreground truncate">
+                            {member.email}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0 ml-3">
+                        {member.mailboxConnected ? (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700 dark:bg-green-900/30 dark:text-green-400">
+                            <Mail className="h-3 w-3" />
+                            Connected
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
+                            <MailX className="h-3 w-3" />
+                            Not connected
+                          </span>
+                        )}
+                        <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
+                          <MemberRoleIcon className="h-3 w-3" />
+                          {member.role}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Invite Link Card — OWNER/ADMIN only */}
       {canEdit && inviteLink && (

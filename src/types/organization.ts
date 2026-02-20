@@ -2,7 +2,15 @@ export interface Organization {
   id: string;
   name: string;
   role: string;
+  mailboxConnected: boolean;
   settings: OrganizationSettings;
+}
+
+export interface OrganizationMember {
+  name: string;
+  email: string;
+  role: string;
+  mailboxConnected: boolean;
 }
 
 export interface OrganizationDetail {
@@ -11,8 +19,10 @@ export interface OrganizationDetail {
   planTier: string;
   role: string;
   createdAt: string;
+  mailboxConnected: boolean;
   settings: OrganizationSettings;
   inviteCode?: string;
+  members?: OrganizationMember[];
 }
 
 export interface OrganizationSettings {

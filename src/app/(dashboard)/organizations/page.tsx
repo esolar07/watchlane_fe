@@ -2,7 +2,7 @@
 
 import { useEffect, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
-import { Building2, Plus, Crown, Shield, User, Mail, Clock } from "lucide-react";
+import { Building2, Plus, Crown, Shield, User, Mail, MailCheck, Clock } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import {
   Card,
@@ -355,7 +355,14 @@ export default function OrganizationsPage() {
                     {org.planTier}
                   </span>
                 </div>
-                {(org.role === "OWNER" || org.role === "ADMIN") && (
+                {org.mailboxConnected ? (
+                  <div className="flex items-center gap-2 rounded-md border border-green-200 bg-green-50 px-3 py-2 dark:border-green-900/50 dark:bg-green-900/20">
+                    <MailCheck className="h-4 w-4 text-green-600 dark:text-green-400" />
+                    <span className="text-sm font-medium text-green-700 dark:text-green-400">
+                      Mailbox connected
+                    </span>
+                  </div>
+                ) : (
                   <Button
                     variant="outline"
                     size="sm"
