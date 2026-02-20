@@ -5,11 +5,15 @@ import { useParams, useRouter } from "next/navigation";
 import {
   ArrowLeft,
   Building2,
+  Check,
   Clock,
+  Copy,
   Crown,
   Pencil,
+  RefreshCw,
   Shield,
   User,
+  Link,
 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import {
@@ -22,7 +26,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { getOrganization, updateOrganization } from "@/services/api";
+import { getOrganization, updateOrganization, regenerateInviteCode } from "@/services/api";
 import type { OrganizationDetail } from "@/types/organization";
 
 const roleIcons: Record<string, typeof Crown> = {
@@ -54,6 +58,8 @@ export default function OrganizationDetailPage() {
   const [editSlaMinutes, setEditSlaMinutes] = useState(120);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState("");
+  const [copied, setCopied] = useState(false);
+  const [isRegenerating, setIsRegenerating] = useState(false);
 
   useEffect(() => {
     if (!params?.id) return;
@@ -116,6 +122,30 @@ export default function OrganizationDetailPage() {
       );
     } finally {
       setIsSaving(false);
+    }
+  }
+
+  const inviteLink = org?.inviteCode
+    ? `${window.location.origin}/invite?code=${org.inviteCode}`
+    : null;
+
+  async function copyInviteLink() {
+    if (!inviteLink) return;
+    await navigator.clipboard.writeText(inviteLink);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }
+
+  async function handleRegenerateInvite() {
+    if (!params?.id) return;
+    setIsRegenerating(true);
+    try {
+      const updated = await regenerateInviteCode(params.id);
+      setOrg(updated);
+    } catch {
+      // silently fail — user can retry
+    } finally {
+      setIsRegenerating(false);
     }
   }
 
@@ -317,6 +347,59 @@ export default function OrganizationDetailPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Invite Link Card — OWNER/ADMIN only */}
+      {canEdit && inviteLink && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base flex items-center gap-2">
+              <Link className="h-4 w-4" />
+              Team Invite Link
+            </CardTitle>
+            <CardDescription>
+              Share this link to invite new members to your organization. Anyone
+              with the link can join as a member.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center gap-2">
+              <Input
+                readOnly
+                value={inviteLink}
+                className="font-mono text-sm"
+              />
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={copyInviteLink}
+                className="shrink-0"
+              >
+                {copied ? (
+                  <Check className="h-4 w-4 text-green-500" />
+                ) : (
+                  <Copy className="h-4 w-4" />
+                )}
+              </Button>
+            </div>
+            <div className="flex items-center justify-between">
+              <p className="text-xs text-muted-foreground">
+                Regenerating will invalidate the current link.
+              </p>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleRegenerateInvite}
+                disabled={isRegenerating}
+              >
+                <RefreshCw
+                  className={`mr-2 h-3.5 w-3.5 ${isRegenerating ? "animate-spin" : ""}`}
+                />
+                {isRegenerating ? "Regenerating..." : "Regenerate"}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }

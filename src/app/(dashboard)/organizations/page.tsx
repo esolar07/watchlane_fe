@@ -28,6 +28,7 @@ import {
   createOrganization,
   getAuthMailboxUrl,
 } from "@/services/api";
+import { useAuth } from "@/components/AuthProvider";
 import type { OrganizationDetail } from "@/types/organization";
 
 const roleIcons: Record<string, typeof Crown> = {
@@ -46,6 +47,10 @@ function formatDate(dateString: string) {
 
 export default function OrganizationsPage() {
   const router = useRouter();
+  const { organizations: authOrgs } = useAuth();
+  const canCreateOrg = authOrgs.some(
+    (o) => o.role === "OWNER" || o.role === "ADMIN"
+  ) || authOrgs.length === 0;
   const [orgs, setOrgs] = useState<OrganizationDetail[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -144,76 +149,81 @@ export default function OrganizationsPage() {
             </div>
             <div>
               <h3 className="text-lg font-semibold">
-                Create your first organization
+                {canCreateOrg
+                  ? "Create your first organization"
+                  : "No organizations yet"}
               </h3>
               <p className="mt-1 text-sm text-muted-foreground">
-                Organizations help you manage email accounts and collaborate
-                with your team.
+                {canCreateOrg
+                  ? "Organizations help you manage email accounts and collaborate with your team."
+                  : "You don\u2019t belong to any organizations yet. Ask an admin to invite you."}
               </p>
             </div>
-            <form onSubmit={handleCreate} className="w-full space-y-5 text-left">
-              <div className="space-y-3">
-                <h4 className="text-sm font-medium text-muted-foreground">Organization Details</h4>
-                <div className="grid gap-2">
-                  <Label htmlFor="org-name">Organization name</Label>
-                  <Input
-                    id="org-name"
-                    placeholder="e.g. Acme Corp"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    disabled={isSubmitting}
-                    autoFocus
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-3 border-t pt-4">
-                <h4 className="text-sm font-medium text-muted-foreground">SLA Settings</h4>
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="sla-enabled">Enable SLA tracking</Label>
-                  <Switch
-                    id="sla-enabled"
-                    checked={slaEnabled}
-                    onCheckedChange={setSlaEnabled}
-                    disabled={isSubmitting}
-                  />
-                </div>
-                {slaEnabled && (
+            {canCreateOrg && (
+              <form onSubmit={handleCreate} className="w-full space-y-5 text-left">
+                <div className="space-y-3">
+                  <h4 className="text-sm font-medium text-muted-foreground">Organization Details</h4>
                   <div className="grid gap-2">
-                    <Label htmlFor="sla-minutes">SLA response time (minutes)</Label>
-                    <div className="relative">
-                      <Clock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                      <Input
-                        id="sla-minutes"
-                        type="number"
-                        min={1}
-                        placeholder="120"
-                        value={slaMinutes}
-                        onChange={(e) => setSlaMinutes(Number(e.target.value))}
-                        disabled={isSubmitting}
-                        className="pl-9"
-                      />
-                    </div>
+                    <Label htmlFor="org-name">Organization name</Label>
+                    <Input
+                      id="org-name"
+                      placeholder="e.g. Acme Corp"
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      disabled={isSubmitting}
+                      autoFocus
+                    />
                   </div>
-                )}
-              </div>
+                </div>
 
-              {error && (
-                <p className="text-sm text-destructive" role="alert">
-                  {error}
-                </p>
-              )}
-              <Button type="submit" disabled={isSubmitting} className="w-full">
-                {isSubmitting ? (
-                  <span className="flex items-center gap-2">
-                    <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                    Creating...
-                  </span>
-                ) : (
-                  "Create organization"
+                <div className="space-y-3 border-t pt-4">
+                  <h4 className="text-sm font-medium text-muted-foreground">SLA Settings</h4>
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="sla-enabled">Enable SLA tracking</Label>
+                    <Switch
+                      id="sla-enabled"
+                      checked={slaEnabled}
+                      onCheckedChange={setSlaEnabled}
+                      disabled={isSubmitting}
+                    />
+                  </div>
+                  {slaEnabled && (
+                    <div className="grid gap-2">
+                      <Label htmlFor="sla-minutes">SLA response time (minutes)</Label>
+                      <div className="relative">
+                        <Clock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                        <Input
+                          id="sla-minutes"
+                          type="number"
+                          min={1}
+                          placeholder="120"
+                          value={slaMinutes}
+                          onChange={(e) => setSlaMinutes(Number(e.target.value))}
+                          disabled={isSubmitting}
+                          className="pl-9"
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {error && (
+                  <p className="text-sm text-destructive" role="alert">
+                    {error}
+                  </p>
                 )}
-              </Button>
-            </form>
+                <Button type="submit" disabled={isSubmitting} className="w-full">
+                  {isSubmitting ? (
+                    <span className="flex items-center gap-2">
+                      <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                      Creating...
+                    </span>
+                  ) : (
+                    "Create organization"
+                  )}
+                </Button>
+              </form>
+            )}
           </CardContent>
         </Card>
       </div>
@@ -229,7 +239,7 @@ export default function OrganizationsPage() {
             Manage your organizations and team access.
           </p>
         </div>
-        <Dialog open={dialogOpen} onOpenChange={resetAndClose}>
+        {canCreateOrg && <Dialog open={dialogOpen} onOpenChange={resetAndClose}>
           <DialogTrigger asChild>
             <Button>
               <Plus className="mr-2 h-4 w-4" />
@@ -310,7 +320,7 @@ export default function OrganizationsPage() {
               </DialogFooter>
             </form>
           </DialogContent>
-        </Dialog>
+        </Dialog>}
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">

@@ -73,6 +73,18 @@ export async function createOrganization(payload: CreateOrganizationPayload): Pr
   return res.json();
 }
 
+export async function regenerateInviteCode(orgId: string): Promise<OrganizationDetail> {
+  const res = await fetch(`${BASE_URL}/api/organizations/${orgId}/regenerate-invite`, {
+    method: "POST",
+    credentials: "include",
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => null);
+    throw new Error(body?.message ?? "Failed to regenerate invite code");
+  }
+  return res.json();
+}
+
 export async function getAuthMailboxUrl(mailbox: string): Promise<{ url: string }> {
   const res = await fetch(
     `${BASE_URL}/api/auth/${mailbox}/connect-url?`,
@@ -80,6 +92,15 @@ export async function getAuthMailboxUrl(mailbox: string): Promise<{ url: string 
   );
   if (!res.ok) {
     throw new Error("Failed to get mailbox connection URL");
+  }
+  return res.json();
+}
+
+export async function getInviteUrl(inviteCode: string): Promise<{ url: string; organizationName: string }> {
+  const res = await fetch(`${BASE_URL}/api/auth/microsoft/invite-url?inviteCode=${encodeURIComponent(inviteCode)}`);
+  if (!res.ok) {
+    if (res.status === 404) throw new Error("Invalid or expired invite link");
+    throw new Error("Failed to get invite URL");
   }
   return res.json();
 }

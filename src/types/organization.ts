@@ -12,6 +12,7 @@ export interface OrganizationDetail {
   role: string;
   createdAt: string;
   settings: OrganizationSettings;
+  inviteCode?: string;
 }
 
 export interface OrganizationSettings {
