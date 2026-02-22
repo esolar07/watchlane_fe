@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -11,9 +12,13 @@ import {
   ChevronLeft,
   ChevronRight,
   X,
+  RefreshCw,
+  Check,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/components/AuthProvider";
+import { triggerSync } from "@/services/api";
 
 const navItems = [
   { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
@@ -36,6 +41,30 @@ export function Sidebar({
   onMobileClose,
 }: SidebarProps) {
   const pathname = usePathname();
+  const { organizations } = useAuth();
+
+  const canSync = organizations.some(
+    (o) => o.role === "OWNER" || o.role === "ADMIN"
+  );
+
+  const [syncState, setSyncState] = useState<
+    "idle" | "syncing" | "success" | "error"
+  >("idle");
+
+  async function handleSync() {
+    if (syncState === "syncing") return;
+    setSyncState("syncing");
+    try {
+      await triggerSync();
+      setSyncState("success");
+      setTimeout(() => {
+        window.location.reload();
+      }, 2000);
+    } catch {
+      setSyncState("error");
+      setTimeout(() => setSyncState("idle"), 3000);
+    }
+  }
 
   return (
     <>
@@ -117,6 +146,48 @@ export function Sidebar({
             );
           })}
         </nav>
+
+        {/* Sync Mail — OWNER/ADMIN only */}
+        {canSync && (
+          <div className="border-t border-sidebar-border px-3 py-3">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleSync}
+              disabled={syncState === "syncing" || syncState === "success"}
+              title={collapsed ? "Sync Mail" : undefined}
+              aria-label={collapsed ? "Sync Mail" : undefined}
+              className={cn(
+                "w-full text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground",
+                collapsed && "px-0",
+                syncState === "success" && "text-emerald-400 hover:text-emerald-400",
+                syncState === "error" && "text-red-400 hover:text-red-400",
+              )}
+            >
+              {syncState === "syncing" ? (
+                <>
+                  <RefreshCw className="h-4 w-4 animate-spin shrink-0" />
+                  {!collapsed && <span className="ml-2">Syncing...</span>}
+                </>
+              ) : syncState === "success" ? (
+                <>
+                  <Check className="h-4 w-4 shrink-0" />
+                  {!collapsed && <span className="ml-2">Synced</span>}
+                </>
+              ) : syncState === "error" ? (
+                <>
+                  <RefreshCw className="h-4 w-4 shrink-0" />
+                  {!collapsed && <span className="ml-2">Sync failed</span>}
+                </>
+              ) : (
+                <>
+                  <RefreshCw className="h-4 w-4 shrink-0" />
+                  {!collapsed && <span className="ml-2">Sync Mail</span>}
+                </>
+              )}
+            </Button>
+          </div>
+        )}
 
         <div className="hidden border-t border-sidebar-border p-3 md:block">
           <Button

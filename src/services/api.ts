@@ -144,3 +144,14 @@ export async function getOrgCoverageDetail(params: {
   }
   return res.json();
 }
+
+export async function triggerSync(): Promise<{ message: string }> {
+  const res = await fetch(`${BASE_URL}/api/dashboard/sync`, {
+    method: "POST",
+    credentials: "include",
+  });
+  if (!res.ok) {
+    throw new Error("Failed to sync mail");
+  }
+  return res.json();
+}
