@@ -16,7 +16,7 @@ import {
   Shield,
   User,
   Users,
-  Link,
+  Link as LinkIcon,
 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import {
@@ -29,8 +29,13 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { getOrganization, updateOrganization, regenerateInviteCode } from "@/services/api";
+import {
+  getOrganization,
+  updateOrganization,
+  regenerateInviteCode,
+} from "@/services/api";
 import type { OrganizationDetail } from "@/types/organization";
+import { OrgTabNav } from "@/components/org-tab-nav";
 
 const roleIcons: Record<string, typeof Crown> = {
   OWNER: Crown,
@@ -46,9 +51,10 @@ function formatDate(dateString: string) {
   });
 }
 
-export default function OrganizationDetailPage() {
+export default function OrganizationSettingsPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
+  const orgId = params?.id ?? "";
 
   const [org, setOrg] = useState<OrganizationDetail | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -65,8 +71,8 @@ export default function OrganizationDetailPage() {
   const [isRegenerating, setIsRegenerating] = useState(false);
 
   useEffect(() => {
-    if (!params?.id) return;
-    getOrganization(params.id)
+    if (!orgId) return;
+    getOrganization(orgId)
       .then((data) => {
         setOrg(data);
         setEditName(data.name);
@@ -74,12 +80,15 @@ export default function OrganizationDetailPage() {
         setEditSlaMinutes(data.settings.slaMinutes);
       })
       .catch((err) => {
-        if (err instanceof Error && err.message === "Organization not found") {
+        if (
+          err instanceof Error &&
+          err.message === "Organization not found"
+        ) {
           setNotFound(true);
         }
       })
       .finally(() => setIsLoading(false));
-  }, [params?.id]);
+  }, [orgId]);
 
   const canEdit = org?.role === "OWNER" || org?.role === "ADMIN";
 
@@ -98,7 +107,7 @@ export default function OrganizationDetailPage() {
   }
 
   async function handleSave() {
-    if (!org || !params?.id) return;
+    if (!org || !orgId) return;
     const trimmed = editName.trim();
     if (!trimmed) {
       setError("Organization name is required.");
@@ -108,7 +117,7 @@ export default function OrganizationDetailPage() {
     setError("");
     setIsSaving(true);
     try {
-      const updated = await updateOrganization(params.id, {
+      const updated = await updateOrganization(orgId, {
         name: trimmed,
         settings: {
           slaEnabled: editSlaEnabled,
@@ -140,10 +149,10 @@ export default function OrganizationDetailPage() {
   }
 
   async function handleRegenerateInvite() {
-    if (!params?.id) return;
+    if (!orgId) return;
     setIsRegenerating(true);
     try {
-      const updated = await regenerateInviteCode(params.id);
+      const updated = await regenerateInviteCode(orgId);
       setOrg(updated);
     } catch {
       // silently fail — user can retry
@@ -169,9 +178,12 @@ export default function OrganizationDetailPage() {
           The organization you&apos;re looking for doesn&apos;t exist or you
           don&apos;t have access.
         </p>
-        <Button variant="outline" onClick={() => router.push("/organizations")}>
+        <Button
+          variant="outline"
+          onClick={() => router.push("/dashboard")}
+        >
           <ArrowLeft className="mr-2 h-4 w-4" />
-          Back to organizations
+          Back to dashboard
         </Button>
       </div>
     );
@@ -181,12 +193,12 @@ export default function OrganizationDetailPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
+      {/* ── Header ── */}
       <div className="flex items-center gap-4">
         <Button
           variant="ghost"
           size="icon"
-          onClick={() => router.push("/organizations")}
+          onClick={() => router.push("/dashboard")}
         >
           <ArrowLeft className="h-4 w-4" />
         </Button>
@@ -211,6 +223,10 @@ export default function OrganizationDetailPage() {
         </div>
       </div>
 
+      {/* ── Tab nav ── */}
+      <OrgTabNav orgId={orgId} />
+
+      {/* ── Settings content ── */}
       <div className="grid gap-6 lg:grid-cols-2">
         {/* Organization Details Card */}
         <Card>
@@ -424,7 +440,7 @@ export default function OrganizationDetailPage() {
         <Card>
           <CardHeader>
             <CardTitle className="text-base flex items-center gap-2">
-              <Link className="h-4 w-4" />
+              <LinkIcon className="h-4 w-4" />
               Team Invite Link
             </CardTitle>
             <CardDescription>

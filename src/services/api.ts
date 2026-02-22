@@ -1,5 +1,5 @@
 import { Organization, OrganizationDetail, CreateOrganizationPayload, UpdateOrganizationPayload } from "@/types/organization";
-import { DashboardSummary } from "@/types/dashboard";
+import { DashboardSummary, CoverageMetrics, OrgCoverageDetail } from "@/types/dashboard";
 import { MeResponse } from "@/types/auth";
 
 const BASE_URL = process.env.NEXT_PUBLIC_WATCHLANE_BASE_API;
@@ -109,6 +109,38 @@ export async function getAuthUrls(): Promise<{ microsoft: string; google: string
   const res = await fetch(`${BASE_URL}/api/auth/urls`);
   if (!res.ok) {
     throw new Error("Failed to fetch auth URLs");
+  }
+  return res.json();
+}
+
+export async function getCoverageMetrics(params: {
+  startDate: string;
+  endDate: string;
+}): Promise<CoverageMetrics[]> {
+  const url = new URL(`${BASE_URL}/api/dashboard/coverage`);
+  url.searchParams.set("startDate", params.startDate);
+  url.searchParams.set("endDate", params.endDate);
+
+  const res = await fetch(url.toString(), { credentials: "include" });
+  if (!res.ok) {
+    throw new Error("Failed to fetch coverage metrics");
+  }
+  return res.json();
+}
+
+export async function getOrgCoverageDetail(params: {
+  orgId: string;
+  startDate: string;
+  endDate: string;
+}): Promise<OrgCoverageDetail> {
+  const url = new URL(`${BASE_URL}/api/dashboard/coverage`);
+  url.searchParams.set("startDate", params.startDate);
+  url.searchParams.set("endDate", params.endDate);
+  url.searchParams.set("orgId", params.orgId);
+
+  const res = await fetch(url.toString(), { credentials: "include" });
+  if (!res.ok) {
+    throw new Error("Failed to fetch organization coverage");
   }
   return res.json();
 }

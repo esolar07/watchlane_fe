@@ -1,5 +1,6 @@
 import { getMe } from "@/services/api";
-import { AuthState } from "@/types/auth";
+import { type AuthState } from "@/types/auth";
+export type { AuthState };
 
 export async function fetchCurrentUser(): Promise<AuthState> {
   try {
