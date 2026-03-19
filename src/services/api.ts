@@ -85,11 +85,11 @@ export async function regenerateInviteCode(orgId: string): Promise<OrganizationD
   return res.json();
 }
 
-export async function getAuthMailboxUrl(mailbox: string): Promise<{ url: string }> {
-  const res = await fetch(
-    `${BASE_URL}/api/auth/${mailbox}/connect-url?`,
-    { credentials: "include" }
-  );
+export async function getAuthMailboxUrl(mailbox: string, orgId: string): Promise<{ url: string }> {
+  const url = new URL(`${BASE_URL}/api/auth/${mailbox}/connect-url`);
+  url.searchParams.set("orgId", orgId);
+
+  const res = await fetch(url.toString(), { credentials: "include" });
   if (!res.ok) {
     throw new Error("Failed to get mailbox connection URL");
   }

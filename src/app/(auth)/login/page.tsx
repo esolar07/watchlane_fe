@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -21,7 +22,6 @@ export default function LoginPage() {
   const [error, setError] = useState("");
 
   if (!authLoading && isAuthenticated) {
-    debugger
     router.push("/dashboard");
     return null;
   }
@@ -100,6 +100,16 @@ export default function LoginPage() {
             </div>
           </CardContent>
         </Card>
+
+        <p className="mt-6 text-center text-sm text-muted-foreground">
+          Don&apos;t have an account?{" "}
+          <Link
+            href="/signup"
+            className="font-medium text-foreground hover:underline"
+          >
+            Create one
+          </Link>
+        </p>
       </div>
     </div>
   );

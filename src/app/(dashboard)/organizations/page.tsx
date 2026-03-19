@@ -114,7 +114,7 @@ export default function OrganizationsPage() {
   async function handleConnectMailbox(orgId: string) {
     setConnectingOrgId(orgId);
     try {
-      const { url } = await getAuthMailboxUrl("microsoft");
+      const { url } = await getAuthMailboxUrl("microsoft", orgId);
       window.location.href = url;
     } catch {
       setConnectingOrgId(null);
