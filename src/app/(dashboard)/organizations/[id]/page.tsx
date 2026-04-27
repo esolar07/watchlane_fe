@@ -36,6 +36,7 @@ import {
 } from "@/services/api";
 import type { OrganizationDetail } from "@/types/organization";
 import { OrgTabNav } from "@/components/org-tab-nav";
+import { cn } from "@/lib/utils";
 
 const roleIcons: Record<string, typeof Crown> = {
   OWNER: Crown,
@@ -51,6 +52,49 @@ function formatDate(dateString: string) {
   });
 }
 
+/* ── reusable section header ── */
+function SectionTitle({
+  icon: Icon,
+  children,
+  description,
+}: {
+  icon?: React.ComponentType<{ className?: string }>;
+  children: React.ReactNode;
+  description?: string;
+}) {
+  return (
+    <CardHeader className="border-b border-border px-5 py-3.5">
+      <CardTitle className="flex items-center gap-2 text-[13px] font-semibold">
+        {Icon && <Icon className="h-3.5 w-3.5 text-muted-foreground" />}
+        {children}
+      </CardTitle>
+      {description && (
+        <CardDescription className="text-[12px]">
+          {description}
+        </CardDescription>
+      )}
+    </CardHeader>
+  );
+}
+
+/* ── label/value row used in read-mode ── */
+function Field({
+  label,
+  children,
+}: {
+  label: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="grid grid-cols-[120px_1fr] items-center gap-3 py-2.5 first:pt-0 last:pb-0">
+      <span className="text-[11.5px] font-medium uppercase tracking-[0.06em] text-muted-foreground">
+        {label}
+      </span>
+      <div className="text-[13px]">{children}</div>
+    </div>
+  );
+}
+
 export default function OrganizationSettingsPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
@@ -60,7 +104,6 @@ export default function OrganizationSettingsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
 
-  // Edit state
   const [isEditing, setIsEditing] = useState(false);
   const [editName, setEditName] = useState("");
   const [editSlaEnabled, setEditSlaEnabled] = useState(false);
@@ -80,10 +123,7 @@ export default function OrganizationSettingsPage() {
         setEditSlaMinutes(data.settings.slaMinutes);
       })
       .catch((err) => {
-        if (
-          err instanceof Error &&
-          err.message === "Organization not found"
-        ) {
+        if (err instanceof Error && err.message === "Organization not found") {
           setNotFound(true);
         }
       })
@@ -113,16 +153,12 @@ export default function OrganizationSettingsPage() {
       setError("Organization name is required.");
       return;
     }
-
     setError("");
     setIsSaving(true);
     try {
       const updated = await updateOrganization(orgId, {
         name: trimmed,
-        settings: {
-          slaEnabled: editSlaEnabled,
-          slaMinutes: editSlaMinutes,
-        },
+        settings: { slaEnabled: editSlaEnabled, slaMinutes: editSlaMinutes },
       });
       setOrg(updated);
       setIsEditing(false);
@@ -130,7 +166,7 @@ export default function OrganizationSettingsPage() {
       setError(
         err instanceof Error
           ? err.message
-          : "Something went wrong. Please try again."
+          : "Something went wrong. Please try again.",
       );
     } finally {
       setIsSaving(false);
@@ -164,7 +200,7 @@ export default function OrganizationSettingsPage() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-24">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+        <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
       </div>
     );
   }
@@ -172,17 +208,20 @@ export default function OrganizationSettingsPage() {
   if (notFound || !org) {
     return (
       <div className="flex flex-col items-center justify-center gap-4 py-24">
-        <Building2 className="h-12 w-12 text-muted-foreground" />
-        <h2 className="text-lg font-semibold">Organization not found</h2>
-        <p className="text-sm text-muted-foreground">
+        <Building2 className="h-10 w-10 text-muted-foreground" />
+        <h2 className="text-[15px] font-semibold tracking-tight">
+          Organization not found
+        </h2>
+        <p className="max-w-sm text-center text-[13px] text-muted-foreground">
           The organization you&apos;re looking for doesn&apos;t exist or you
           don&apos;t have access.
         </p>
         <Button
           variant="outline"
+          size="sm"
           onClick={() => router.push("/dashboard")}
         >
-          <ArrowLeft className="mr-2 h-4 w-4" />
+          <ArrowLeft className="mr-1.5 h-3.5 w-3.5" />
           Back to dashboard
         </Button>
       </div>
@@ -194,52 +233,53 @@ export default function OrganizationSettingsPage() {
   return (
     <div className="space-y-6">
       {/* ── Header ── */}
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-3">
         <Button
           variant="ghost"
           size="icon"
+          className="h-8 w-8"
           onClick={() => router.push("/dashboard")}
         >
           <ArrowLeft className="h-4 w-4" />
         </Button>
         <div className="flex flex-1 items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
-              <Building2 className="h-5 w-5 text-primary" />
+            <div className="flex h-9 w-9 items-center justify-center rounded-md border border-border bg-muted/50">
+              <Building2 className="h-4 w-4 text-muted-foreground" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold tracking-tight">{org.name}</h1>
-              <p className="text-sm text-muted-foreground">
+              <h1 className="text-[20px] font-semibold tracking-tight leading-none">
+                {org.name}
+              </h1>
+              <p className="mt-1 text-[12px] text-muted-foreground">
                 Created {formatDate(org.createdAt)}
               </p>
             </div>
           </div>
           {canEdit && !isEditing && (
-            <Button variant="outline" onClick={startEditing}>
-              <Pencil className="mr-2 h-4 w-4" />
+            <Button variant="outline" size="sm" onClick={startEditing}>
+              <Pencil className="mr-1.5 h-3.5 w-3.5" />
               Edit
             </Button>
           )}
         </div>
       </div>
 
-      {/* ── Tab nav ── */}
       <OrgTabNav orgId={orgId} />
 
-      {/* ── Settings content ── */}
+      {/* ── Settings grid ── */}
       <div className="grid gap-6 lg:grid-cols-2">
-        {/* Organization Details Card */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Organization Details</CardTitle>
-            <CardDescription>
-              General information about your organization.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
+        {/* Organization details */}
+        <Card className="gap-0 py-0 shadow-none">
+          <SectionTitle description="General information about your organization.">
+            Organization details
+          </SectionTitle>
+          <CardContent className="px-5 py-4">
             {isEditing ? (
               <div className="grid gap-2">
-                <Label htmlFor="edit-name">Organization name</Label>
+                <Label htmlFor="edit-name" className="text-[12px] font-medium">
+                  Organization name
+                </Label>
                 <Input
                   id="edit-name"
                   value={editName}
@@ -249,40 +289,36 @@ export default function OrganizationSettingsPage() {
                 />
               </div>
             ) : (
-              <div className="grid gap-1">
-                <span className="text-sm text-muted-foreground">Name</span>
-                <span className="font-medium">{org.name}</span>
+              <div className="divide-y divide-border">
+                <Field label="Name">
+                  <span className="font-medium">{org.name}</span>
+                </Field>
+                <Field label="Role">
+                  <span className="inline-flex h-5 items-center gap-1 rounded border border-border bg-muted/50 px-1.5 text-[10.5px] font-medium uppercase tracking-wide text-muted-foreground">
+                    <RoleIcon className="h-2.5 w-2.5" />
+                    {org.role}
+                  </span>
+                </Field>
+                <Field label="Plan">
+                  <span className="inline-flex h-5 items-center rounded border border-border bg-muted/50 px-1.5 text-[10.5px] font-medium uppercase tracking-wide text-muted-foreground">
+                    {org.planTier}
+                  </span>
+                </Field>
               </div>
             )}
-            <div className="grid gap-1">
-              <span className="text-sm text-muted-foreground">Role</span>
-              <span className="inline-flex w-fit items-center gap-1.5 rounded-full bg-muted px-2.5 py-0.5 text-xs font-medium text-muted-foreground">
-                <RoleIcon className="h-3 w-3" />
-                {org.role}
-              </span>
-            </div>
-            <div className="grid gap-1">
-              <span className="text-sm text-muted-foreground">Plan</span>
-              <span className="inline-flex w-fit rounded-full bg-muted px-2.5 py-0.5 text-xs font-medium text-muted-foreground">
-                {org.planTier}
-              </span>
-            </div>
           </CardContent>
         </Card>
 
-        {/* SLA Settings Card */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">SLA Settings</CardTitle>
-            <CardDescription>
-              Configure service level agreement tracking.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
+        {/* SLA */}
+        <Card className="gap-0 py-0 shadow-none">
+          <SectionTitle description="Configure service level agreement tracking.">
+            SLA settings
+          </SectionTitle>
+          <CardContent className="space-y-4 px-5 py-4">
             <div className="flex items-center justify-between">
               <div className="grid gap-0.5">
-                <span className="text-sm font-medium">SLA tracking</span>
-                <span className="text-xs text-muted-foreground">
+                <span className="text-[13px] font-medium">SLA tracking</span>
+                <span className="text-[12px] text-muted-foreground">
                   Monitor response time against your SLA target.
                 </span>
               </div>
@@ -294,11 +330,12 @@ export default function OrganizationSettingsPage() {
                 />
               ) : (
                 <span
-                  className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                  className={cn(
+                    "inline-flex h-5 items-center rounded border px-1.5 text-[10.5px] font-medium uppercase tracking-wide",
                     org.settings.slaEnabled
-                      ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
-                      : "bg-muted text-muted-foreground"
-                  }`}
+                      ? "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900/50 dark:bg-emerald-900/20 dark:text-emerald-400"
+                      : "border-border bg-muted/50 text-muted-foreground",
+                  )}
                 >
                   {org.settings.slaEnabled ? "Enabled" : "Disabled"}
                 </span>
@@ -306,56 +343,54 @@ export default function OrganizationSettingsPage() {
             </div>
 
             {(isEditing ? editSlaEnabled : org.settings.slaEnabled) && (
-              <div className="grid gap-2">
-                <span className="text-sm font-medium">
+              <div className="grid gap-2 border-t border-border pt-4">
+                <span className="text-[12px] font-medium">
                   Response time target
                 </span>
                 {isEditing ? (
-                  <div className="relative">
-                    <Clock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                    <Input
-                      type="number"
-                      min={1}
-                      value={editSlaMinutes}
-                      onChange={(e) =>
-                        setEditSlaMinutes(Number(e.target.value))
-                      }
-                      disabled={isSaving}
-                      className="pl-9"
-                    />
-                    <span className="mt-1 text-xs text-muted-foreground">
+                  <>
+                    <div className="relative">
+                      <Clock className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+                      <Input
+                        type="number"
+                        min={1}
+                        value={editSlaMinutes}
+                        onChange={(e) =>
+                          setEditSlaMinutes(Number(e.target.value))
+                        }
+                        disabled={isSaving}
+                        className="pl-8"
+                      />
+                    </div>
+                    <span className="text-[11.5px] text-muted-foreground">
                       Time in minutes before an SLA breach.
                     </span>
-                  </div>
+                  </>
                 ) : (
-                  <div className="flex items-center gap-2 text-sm">
-                    <Clock className="h-4 w-4 text-muted-foreground" />
-                    <span>{org.settings.slaMinutes} minutes</span>
+                  <div className="flex items-center gap-2 text-[13px]">
+                    <Clock className="h-3.5 w-3.5 text-muted-foreground" />
+                    <span className="tabular-nums">
+                      {org.settings.slaMinutes} minutes
+                    </span>
                   </div>
                 )}
               </div>
             )}
 
             {error && (
-              <p className="text-sm text-destructive" role="alert">
+              <p className="text-[12px] text-destructive" role="alert">
                 {error}
               </p>
             )}
 
             {isEditing && (
-              <div className="flex gap-2 pt-2">
-                <Button onClick={handleSave} disabled={isSaving}>
-                  {isSaving ? (
-                    <span className="flex items-center gap-2">
-                      <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                      Saving...
-                    </span>
-                  ) : (
-                    "Save changes"
-                  )}
+              <div className="flex gap-2 border-t border-border pt-4">
+                <Button onClick={handleSave} disabled={isSaving} size="sm">
+                  {isSaving ? "Saving…" : "Save changes"}
                 </Button>
                 <Button
                   variant="outline"
+                  size="sm"
                   onClick={cancelEditing}
                   disabled={isSaving}
                 >
@@ -367,121 +402,118 @@ export default function OrganizationSettingsPage() {
         </Card>
       </div>
 
-      {/* Team Members Card — OWNER/ADMIN only */}
+      {/* Team Members — OWNER/ADMIN only */}
       {canEdit && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base flex items-center gap-2">
-              <Users className="h-4 w-4" />
-              Team Members
-            </CardTitle>
-            <CardDescription>
-              People who belong to this organization.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
+        <Card className="gap-0 py-0 shadow-none">
+          <SectionTitle
+            icon={Users}
+            description="People who belong to this organization."
+          >
+            Team members
+          </SectionTitle>
+          <CardContent className="p-0">
             {!org.members || org.members.length === 0 ? (
-              <div className="flex flex-col items-center gap-2 py-6 text-center">
-                <Users className="h-8 w-8 text-muted-foreground" />
-                <p className="text-sm text-muted-foreground">
-                  No members yet. Share the invite link to add team members.
+              <div className="flex flex-col items-center gap-2 px-6 py-10 text-center">
+                <Users className="h-6 w-6 text-muted-foreground" />
+                <p className="text-[12.5px] text-muted-foreground">
+                  No members yet. Share the invite link below to add people.
                 </p>
               </div>
             ) : (
-              <div className="divide-y">
+              <ul className="divide-y divide-border">
                 {org.members.map((member) => {
                   const MemberRoleIcon = roleIcons[member.role] ?? User;
                   return (
-                    <div
+                    <li
                       key={member.email}
-                      className="flex items-center justify-between py-3 first:pt-0 last:pb-0"
+                      className="flex items-center justify-between gap-3 px-5 py-3"
                     >
-                      <div className="flex items-center gap-3 min-w-0">
-                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-muted">
-                          <User className="h-4 w-4 text-muted-foreground" />
+                      <div className="flex min-w-0 items-center gap-3">
+                        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-muted">
+                          <User className="h-3.5 w-3.5 text-muted-foreground" />
                         </div>
                         <div className="min-w-0">
-                          <p className="text-sm font-medium truncate">
+                          <p className="truncate text-[13px] font-medium leading-none">
                             {member.name}
                           </p>
-                          <p className="text-xs text-muted-foreground truncate">
+                          <p className="mt-1 truncate text-[11.5px] text-muted-foreground">
                             {member.email}
                           </p>
                         </div>
                       </div>
-                      <div className="flex items-center gap-2 shrink-0 ml-3">
+                      <div className="flex shrink-0 items-center gap-2">
                         {member.mailboxConnected ? (
-                          <span className="inline-flex items-center gap-1 rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700 dark:bg-green-900/30 dark:text-green-400">
-                            <Mail className="h-3 w-3" />
+                          <span className="inline-flex h-5 items-center gap-1 rounded border border-emerald-200 bg-emerald-50 px-1.5 text-[10.5px] font-medium text-emerald-700 dark:border-emerald-900/50 dark:bg-emerald-900/20 dark:text-emerald-400">
+                            <Mail className="h-2.5 w-2.5" />
                             Connected
                           </span>
                         ) : (
-                          <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
-                            <MailX className="h-3 w-3" />
+                          <span className="inline-flex h-5 items-center gap-1 rounded border border-border bg-muted/50 px-1.5 text-[10.5px] font-medium text-muted-foreground">
+                            <MailX className="h-2.5 w-2.5" />
                             Not connected
                           </span>
                         )}
-                        <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
-                          <MemberRoleIcon className="h-3 w-3" />
+                        <span className="inline-flex h-5 items-center gap-1 rounded border border-border bg-muted/50 px-1.5 text-[10.5px] font-medium uppercase tracking-wide text-muted-foreground">
+                          <MemberRoleIcon className="h-2.5 w-2.5" />
                           {member.role}
                         </span>
                       </div>
-                    </div>
+                    </li>
                   );
                 })}
-              </div>
+              </ul>
             )}
           </CardContent>
         </Card>
       )}
 
-      {/* Invite Link Card — OWNER/ADMIN only */}
+      {/* Invite link — OWNER/ADMIN only */}
       {canEdit && inviteLink && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base flex items-center gap-2">
-              <LinkIcon className="h-4 w-4" />
-              Team Invite Link
-            </CardTitle>
-            <CardDescription>
-              Share this link to invite new members to your organization. Anyone
-              with the link can join as a member.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
+        <Card className="gap-0 py-0 shadow-none">
+          <SectionTitle
+            icon={LinkIcon}
+            description="Share this link to invite new members. Anyone with the link can join as a member."
+          >
+            Team invite link
+          </SectionTitle>
+          <CardContent className="space-y-3 px-5 py-4">
             <div className="flex items-center gap-2">
               <Input
                 readOnly
                 value={inviteLink}
-                className="font-mono text-sm"
+                className="font-mono text-[12px]"
               />
               <Button
                 variant="outline"
                 size="icon"
+                className="h-9 w-9 shrink-0"
                 onClick={copyInviteLink}
-                className="shrink-0"
               >
                 {copied ? (
-                  <Check className="h-4 w-4 text-green-500" />
+                  <Check className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
                 ) : (
-                  <Copy className="h-4 w-4" />
+                  <Copy className="h-3.5 w-3.5" />
                 )}
               </Button>
             </div>
             <div className="flex items-center justify-between">
-              <p className="text-xs text-muted-foreground">
+              <p className="text-[11.5px] text-muted-foreground">
                 Regenerating will invalidate the current link.
               </p>
               <Button
                 variant="ghost"
                 size="sm"
+                className="h-7 text-[12px]"
                 onClick={handleRegenerateInvite}
                 disabled={isRegenerating}
               >
                 <RefreshCw
-                  className={`mr-2 h-3.5 w-3.5 ${isRegenerating ? "animate-spin" : ""}`}
+                  className={cn(
+                    "mr-1.5 h-3 w-3",
+                    isRegenerating && "animate-spin",
+                  )}
                 />
-                {isRegenerating ? "Regenerating..." : "Regenerate"}
+                {isRegenerating ? "Regenerating…" : "Regenerate"}
               </Button>
             </div>
           </CardContent>

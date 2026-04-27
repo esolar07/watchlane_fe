@@ -57,9 +57,7 @@ export function Sidebar({
     try {
       await triggerSync();
       setSyncState("success");
-      setTimeout(() => {
-        window.location.reload();
-      }, 2000);
+      setTimeout(() => window.location.reload(), 2000);
     } catch {
       setSyncState("error");
       setTimeout(() => setSyncState("idle"), 3000);
@@ -70,54 +68,44 @@ export function Sidebar({
     <>
       {mobileOpen && (
         <div
-          className="fixed inset-0 z-40 bg-black/50 md:hidden"
+          className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm md:hidden"
           onClick={onMobileClose}
         />
       )}
 
       <aside
         className={cn(
-          "fixed inset-y-0 left-0 z-50 flex flex-col bg-sidebar text-sidebar-foreground transition-all duration-300",
-          "max-md:-translate-x-full max-md:w-[260px]",
+          "fixed inset-y-0 left-0 z-50 flex flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground transition-all duration-200",
+          "max-md:-translate-x-full max-md:w-[240px]",
           mobileOpen && "max-md:translate-x-0",
           "md:z-30",
-          collapsed ? "md:w-[68px]" : "md:w-[240px]",
+          collapsed ? "md:w-[60px]" : "md:w-[220px]",
         )}
       >
-        <div className="flex h-16 items-center justify-between px-4 mt-4">
-          <div className="flex items-center">
-            {!collapsed || mobileOpen ? (
-              <Image
-                src="/logo.svg"
-                alt="WatchLane"
-                width={140}
-                height={140}
-                className="shrink-0 brightness-0 invert"
-                priority
-              />
-            ) : (
-              <Image
-                src="/logo-icon.svg"
-                alt="WatchLane"
-                width={28}
-                height={28}
-                className="shrink-0 brightness-0 invert"
-                priority
-              />
+        {/* Brand */}
+        <div className="flex h-12 items-center justify-between px-3">
+          <div className="flex items-center gap-2 min-w-0">
+            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-primary text-primary-foreground text-xs font-semibold">
+              W
+            </div>
+            {(!collapsed || mobileOpen) && (
+              <span className="text-[13.5px] font-semibold tracking-tight">Watchlane</span>
             )}
+            <Image src="/logo.svg" alt="" width={0} height={0} className="hidden" priority />
           </div>
           <Button
             variant="ghost"
             size="sm"
             onClick={onMobileClose}
-            className="text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground md:hidden"
+            className="text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground md:hidden"
             aria-label="Close sidebar"
           >
             <X className="h-4 w-4" />
           </Button>
         </div>
 
-        <nav className="mt-6 flex flex-1 flex-col gap-1 px-3">
+        {/* Nav */}
+        <nav className="mt-3 flex flex-1 flex-col gap-px px-2">
           {navItems.map((item) => {
             const isActive =
               pathname === item.href || pathname.startsWith(item.href + "/");
@@ -127,29 +115,25 @@ export function Sidebar({
                 href={item.href}
                 onClick={onMobileClose}
                 aria-label={collapsed ? item.label : undefined}
+                title={collapsed ? item.label : undefined}
                 className={cn(
-                  "group flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
+                  "group flex items-center gap-2.5 rounded-md px-2.5 py-1.5 text-[13px] font-medium transition-colors",
                   isActive
                     ? "bg-sidebar-accent text-sidebar-accent-foreground"
-                    : "text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground",
-                  collapsed && "max-md:justify-start max-md:px-3 md:justify-center md:px-0",
+                    : "text-sidebar-foreground/65 hover:bg-sidebar-accent/60 hover:text-sidebar-foreground",
+                  collapsed && "md:justify-center md:px-0",
                 )}
-                title={collapsed ? item.label : undefined}
               >
-                <item.icon className="h-5 w-5 shrink-0" />
-                {collapsed ? (
-                  <span className="md:hidden">{item.label}</span>
-                ) : (
-                  <span>{item.label}</span>
-                )}
+                <item.icon className={cn("h-[15px] w-[15px] shrink-0", isActive ? "text-primary" : "")} />
+                {(!collapsed || mobileOpen) && <span>{item.label}</span>}
               </Link>
             );
           })}
         </nav>
 
-        {/* Sync Mail — OWNER/ADMIN only */}
+        {/* Sync */}
         {canSync && (
-          <div className="border-t border-sidebar-border px-3 py-3">
+          <div className="border-t border-sidebar-border px-2 py-2">
             <Button
               variant="ghost"
               size="sm"
@@ -158,16 +142,16 @@ export function Sidebar({
               title={collapsed ? "Sync Mail" : undefined}
               aria-label={collapsed ? "Sync Mail" : undefined}
               className={cn(
-                "w-full text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground",
-                collapsed && "px-0",
-                syncState === "success" && "text-emerald-400 hover:text-emerald-400",
-                syncState === "error" && "text-red-400 hover:text-red-400",
+                "w-full justify-start text-[12.5px] text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground",
+                collapsed && "md:justify-center md:px-0",
+                syncState === "success" && "text-emerald-500 hover:text-emerald-500",
+                syncState === "error" && "text-red-500 hover:text-red-500",
               )}
             >
               {syncState === "syncing" ? (
                 <>
                   <RefreshCw className="h-4 w-4 animate-spin shrink-0" />
-                  {!collapsed && <span className="ml-2">Syncing...</span>}
+                  {!collapsed && <span className="ml-2">Syncing…</span>}
                 </>
               ) : syncState === "success" ? (
                 <>
@@ -182,14 +166,14 @@ export function Sidebar({
               ) : (
                 <>
                   <RefreshCw className="h-4 w-4 shrink-0" />
-                  {!collapsed && <span className="ml-2">Sync Mail</span>}
+                  {!collapsed && <span className="ml-2">Sync mail</span>}
                 </>
               )}
             </Button>
           </div>
         )}
 
-        <div className="hidden border-t border-sidebar-border p-3 md:block">
+        <div className="hidden border-t border-sidebar-border p-2 md:block">
           <Button
             variant="ghost"
             size="sm"
@@ -197,8 +181,8 @@ export function Sidebar({
             aria-expanded={!collapsed}
             aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
             className={cn(
-              "w-full text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground",
-              collapsed && "px-0",
+              "w-full justify-start text-[12.5px] text-sidebar-foreground/65 hover:bg-sidebar-accent hover:text-sidebar-foreground",
+              collapsed && "px-0 justify-center",
             )}
           >
             {collapsed ? (

@@ -36,22 +36,24 @@ export function aggregate(items: CoverageMetrics[]) {
 }
 
 export function complianceColor(percent: number) {
-  if (percent >= 90) return "text-emerald-600";
-  if (percent >= 70) return "text-amber-500";
-  return "text-red-500";
-}
-
-export function complianceBg(percent: number) {
-  if (percent >= 90) return "bg-emerald-50 border-emerald-200";
-  if (percent >= 70) return "bg-amber-50 border-amber-200";
-  return "bg-red-50 border-red-200";
+  if (percent >= 90) return "text-emerald-600 dark:text-emerald-400";
+  if (percent >= 70) return "text-amber-600 dark:text-amber-400";
+  return "text-red-600 dark:text-red-400";
 }
 
 export function complianceBadge(percent: number) {
   if (percent >= 90)
-    return "bg-emerald-100 text-emerald-700 border-emerald-200";
-  if (percent >= 70) return "bg-amber-100 text-amber-700 border-amber-200";
-  return "bg-red-100 text-red-700 border-red-200";
+    return "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900/50 dark:bg-emerald-900/20 dark:text-emerald-400";
+  if (percent >= 70)
+    return "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-900/50 dark:bg-amber-900/20 dark:text-amber-400";
+  return "border-red-200 bg-red-50 text-red-700 dark:border-red-900/50 dark:bg-red-900/20 dark:text-red-400";
+}
+
+// Soft tinted card backgrounds — keep subtle, no heavy fills
+export function complianceBg(percent: number) {
+  if (percent >= 90) return "";
+  if (percent >= 70) return "";
+  return "";
 }
 
 // ── Donut chart ──
@@ -68,22 +70,22 @@ export function donutSegments(d: {
   breaches: number;
 }): DonutSegment[] {
   return [
-    { value: d.coveredWithinSla, color: "#10b981", label: "Covered" },
-    { value: d.atRisk, color: "#f59e0b", label: "At Risk" },
-    { value: d.breaches, color: "#ef4444", label: "Breached" },
+    { value: d.coveredWithinSla, color: "var(--color-chart-2)", label: "Covered" },
+    { value: d.atRisk,           color: "var(--color-chart-3)", label: "At Risk" },
+    { value: d.breaches,         color: "var(--color-chart-4)", label: "Breached" },
   ];
 }
 
 export function DonutChart({
   segments,
   total,
-  size = 160,
+  size = 168,
 }: {
   segments: DonutSegment[];
   total: number;
   size?: number;
 }) {
-  const strokeWidth = 24;
+  const strokeWidth = 14;
   const radius = (size - strokeWidth) / 2;
   const circumference = 2 * Math.PI * radius;
   let cumulativeOffset = 0;
@@ -97,7 +99,7 @@ export function DonutChart({
           r={radius}
           fill="none"
           stroke="currentColor"
-          className="text-muted/50"
+          className="text-muted"
           strokeWidth={strokeWidth}
         />
         <text
@@ -113,8 +115,18 @@ export function DonutChart({
     );
   }
 
+  // Track ring (very subtle)
   return (
     <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+      <circle
+        cx={size / 2}
+        cy={size / 2}
+        r={radius}
+        fill="none"
+        stroke="currentColor"
+        className="text-muted"
+        strokeWidth={strokeWidth}
+      />
       {segments.map((seg) => {
         const pct = seg.value / total;
         const dashLength = pct * circumference;
@@ -142,8 +154,8 @@ export function DonutChart({
         y="46%"
         textAnchor="middle"
         dominantBaseline="central"
-        className="fill-foreground font-bold"
-        style={{ fontSize: 28 }}
+        className="wl-num fill-foreground"
+        style={{ fontSize: 30, fontWeight: 600, letterSpacing: "-0.02em" }}
       >
         {total}
       </text>
@@ -153,15 +165,50 @@ export function DonutChart({
         textAnchor="middle"
         dominantBaseline="central"
         className="fill-muted-foreground"
-        style={{ fontSize: 11 }}
+        style={{ fontSize: 10.5, letterSpacing: "0.06em", textTransform: "uppercase" }}
       >
-        threads
+        Threads
       </text>
     </svg>
   );
 }
 
 // ── KPI cards ──
+
+function KpiTile({
+  label,
+  value,
+  icon: Icon,
+  iconClass,
+  valueClass,
+  hint,
+}: {
+  label: string;
+  value: string;
+  icon: React.ComponentType<{ className?: string }>;
+  iconClass?: string;
+  valueClass?: string;
+  hint?: string;
+}) {
+  return (
+    <Card className="gap-0 border-border py-0 shadow-none transition-colors hover:bg-muted/40">
+      <div className="flex flex-col gap-3 p-4">
+        <div className="flex items-center justify-between">
+          <span className="text-[11.5px] font-medium uppercase tracking-[0.06em] text-muted-foreground">
+            {label}
+          </span>
+          <Icon className={cn("h-3.5 w-3.5 text-muted-foreground", iconClass)} />
+        </div>
+        <div className="flex items-baseline gap-2">
+          <span className={cn("wl-num text-[26px] font-semibold leading-none tracking-tight", valueClass)}>
+            {value}
+          </span>
+          {hint && <span className="text-[11px] text-muted-foreground">{hint}</span>}
+        </div>
+      </div>
+    </Card>
+  );
+}
 
 export function KpiCards({
   data,
@@ -174,96 +221,36 @@ export function KpiCards({
   };
   slaTarget: number | null;
 }) {
+  const oldestOverdue =
+    slaTarget !== null && data.oldestUncoveredMinutes > slaTarget;
+
   return (
     <section aria-label="Key performance indicators">
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card className="transition-shadow hover:shadow-md">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              SLA Target
-            </CardTitle>
-            <Target className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent className="pt-0">
-            <p className="text-2xl font-bold">
-              {slaTarget !== null ? formatMinutes(slaTarget) : "Varies"}
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card
-          className={cn(
-            "border transition-shadow hover:shadow-md",
-            complianceBg(data.compliancePercent)
-          )}
-        >
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Compliance
-            </CardTitle>
-            <CheckCircle2
-              className={cn(
-                "h-4 w-4",
-                complianceColor(data.compliancePercent)
-              )}
-            />
-          </CardHeader>
-          <CardContent className="pt-0">
-            <p
-              className={cn(
-                "text-2xl font-bold",
-                complianceColor(data.compliancePercent)
-              )}
-            >
-              {data.compliancePercent.toFixed(1)}%
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card className="transition-shadow hover:shadow-md">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Avg Response Time
-            </CardTitle>
-            <Clock className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent className="pt-0">
-            <p className="text-2xl font-bold">
-              {formatMinutes(data.avgResponseMinutes)}
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card className="transition-shadow hover:shadow-md">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Oldest Uncovered
-            </CardTitle>
-            <Timer
-              className={cn(
-                "h-4 w-4",
-                slaTarget !== null &&
-                  data.oldestUncoveredMinutes > slaTarget
-                  ? "text-red-500"
-                  : "text-muted-foreground"
-              )}
-            />
-          </CardHeader>
-          <CardContent className="pt-0">
-            <p
-              className={cn(
-                "text-2xl font-bold",
-                slaTarget !== null &&
-                  data.oldestUncoveredMinutes > slaTarget &&
-                  "text-red-500"
-              )}
-            >
-              {data.oldestUncoveredMinutes > 0
-                ? formatMinutes(data.oldestUncoveredMinutes)
-                : "---"}
-            </p>
-          </CardContent>
-        </Card>
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <KpiTile
+          label="SLA Target"
+          value={slaTarget !== null ? formatMinutes(slaTarget) : "Varies"}
+          icon={Target}
+        />
+        <KpiTile
+          label="Compliance"
+          value={`${data.compliancePercent.toFixed(1)}%`}
+          icon={CheckCircle2}
+          iconClass={complianceColor(data.compliancePercent)}
+          valueClass={complianceColor(data.compliancePercent)}
+        />
+        <KpiTile
+          label="Avg Response"
+          value={formatMinutes(data.avgResponseMinutes)}
+          icon={Clock}
+        />
+        <KpiTile
+          label="Oldest Uncovered"
+          value={data.oldestUncoveredMinutes > 0 ? formatMinutes(data.oldestUncoveredMinutes) : "—"}
+          icon={Timer}
+          iconClass={oldestOverdue ? "text-red-600 dark:text-red-400" : ""}
+          valueClass={oldestOverdue ? "text-red-600 dark:text-red-400" : ""}
+        />
       </div>
     </section>
   );
@@ -274,6 +261,49 @@ export function KpiCards({
 function pct(value: number, total: number) {
   if (total === 0) return "0";
   return ((value / total) * 100).toFixed(0);
+}
+
+function DistRow({
+  swatchVar,
+  label,
+  value,
+  total,
+  valueClass,
+}: {
+  swatchVar: string;
+  label: string;
+  value: number;
+  total: number;
+  valueClass?: string;
+}) {
+  const p = total > 0 ? (value / total) * 100 : 0;
+  return (
+    <div>
+      <div className="mb-1.5 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <span
+            className="inline-block h-2 w-2 rounded-full"
+            style={{ backgroundColor: swatchVar }}
+          />
+          <span className="text-[13px] font-medium">{label}</span>
+        </div>
+        <div className="flex items-baseline gap-1.5">
+          <span className={cn("wl-num text-[14px] font-semibold tabular-nums", valueClass)}>
+            {value}
+          </span>
+          <span className="text-[11px] tabular-nums text-muted-foreground">
+            {pct(value, total)}%
+          </span>
+        </div>
+      </div>
+      <div className="h-1 w-full overflow-hidden rounded-full bg-muted">
+        <div
+          className="h-full rounded-full transition-all"
+          style={{ width: `${p}%`, backgroundColor: swatchVar }}
+        />
+      </div>
+    </div>
+  );
 }
 
 export function BreakdownSection({
@@ -287,72 +317,43 @@ export function BreakdownSection({
   };
 }) {
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-base">Thread Distribution</CardTitle>
+    <Card className="gap-0 py-0 shadow-none">
+      <CardHeader className="border-b border-border px-5 py-3.5">
+        <CardTitle className="text-[13px] font-semibold">Thread Distribution</CardTitle>
       </CardHeader>
-      <CardContent>
-        <div className="flex flex-col items-center gap-6 sm:flex-row sm:gap-8">
-          {/* Donut */}
-          <div className="shrink-0">
+      <CardContent className="p-5">
+        <div className="flex flex-col items-center gap-8 sm:flex-row sm:items-stretch">
+          <div className="flex shrink-0 items-center justify-center">
             <DonutChart
               total={data.totalInbound}
               segments={donutSegments(data)}
             />
           </div>
-
-          {/* Stat rows */}
-          <div className="flex-1 space-y-4 w-full">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <span className="inline-block h-2.5 w-2.5 rounded-full bg-emerald-500" />
-                <span className="text-sm font-medium">Covered Within SLA</span>
-              </div>
-              <div className="flex items-baseline gap-1.5">
-                <span className="text-lg font-bold text-emerald-600">
-                  {data.coveredWithinSla}
-                </span>
-                <span className="text-xs text-muted-foreground">
-                  ({pct(data.coveredWithinSla, data.totalInbound)}%)
-                </span>
-              </div>
-            </div>
-
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <span className="inline-block h-2.5 w-2.5 rounded-full bg-red-500" />
-                <span className="text-sm font-medium">Breaches</span>
-              </div>
-              <div className="flex items-baseline gap-1.5">
-                <span className="text-lg font-bold text-red-600">
-                  {data.breaches}
-                </span>
-                <span className="text-xs text-muted-foreground">
-                  ({pct(data.breaches, data.totalInbound)}%)
-                </span>
-              </div>
-            </div>
-
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <span className="inline-block h-2.5 w-2.5 rounded-full bg-amber-500" />
-                <span className="text-sm font-medium">At Risk</span>
-              </div>
-              <div className="flex items-baseline gap-1.5">
-                <span className="text-lg font-bold text-amber-600">
-                  {data.atRisk}
-                </span>
-                <span className="text-xs text-muted-foreground">
-                  ({pct(data.atRisk, data.totalInbound)}%)
-                </span>
-              </div>
-            </div>
-
-            <div className="border-t pt-3 flex items-center justify-between text-sm text-muted-foreground">
-              <span>Total inbound</span>
-              <span className="font-semibold text-foreground">
-                {data.totalInbound}
-              </span>
+          <div className="flex-1 space-y-4">
+            <DistRow
+              swatchVar="var(--color-chart-2)"
+              label="Covered Within SLA"
+              value={data.coveredWithinSla}
+              total={data.totalInbound}
+              valueClass="text-emerald-600 dark:text-emerald-400"
+            />
+            <DistRow
+              swatchVar="var(--color-chart-3)"
+              label="At Risk"
+              value={data.atRisk}
+              total={data.totalInbound}
+              valueClass="text-amber-600 dark:text-amber-400"
+            />
+            <DistRow
+              swatchVar="var(--color-chart-4)"
+              label="Breaches"
+              value={data.breaches}
+              total={data.totalInbound}
+              valueClass="text-red-600 dark:text-red-400"
+            />
+            <div className="flex items-center justify-between border-t border-border pt-3 text-[13px]">
+              <span className="text-muted-foreground">Total inbound</span>
+              <span className="wl-num font-semibold">{data.totalInbound}</span>
             </div>
           </div>
         </div>
@@ -365,31 +366,32 @@ export function BreakdownSection({
 
 export function CoverageSkeleton() {
   return (
-    <div className="space-y-6">
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+    <div className="space-y-4">
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         {Array.from({ length: 4 }).map((_, i) => (
-          <Card key={i}>
-            <CardHeader className="pb-2">
-              <Skeleton className="h-4 w-24" />
-            </CardHeader>
-            <CardContent className="pt-0">
-              <Skeleton className="h-8 w-20" />
-            </CardContent>
+          <Card key={i} className="gap-0 py-0 shadow-none">
+            <div className="flex flex-col gap-3 p-4">
+              <Skeleton className="h-3 w-20" />
+              <Skeleton className="h-7 w-24" />
+            </div>
           </Card>
         ))}
       </div>
-      <div className="grid gap-4 md:grid-cols-3">
-        {Array.from({ length: 3 }).map((_, i) => (
-          <Card key={i}>
-            <CardHeader className="pb-2">
-              <Skeleton className="h-4 w-28" />
-            </CardHeader>
-            <CardContent className="pt-0">
-              <Skeleton className="h-10 w-16" />
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+      <Card className="gap-0 py-0 shadow-none">
+        <CardHeader className="border-b border-border px-5 py-3.5">
+          <Skeleton className="h-4 w-40" />
+        </CardHeader>
+        <CardContent className="p-5">
+          <div className="flex flex-col items-center gap-6 sm:flex-row">
+            <Skeleton className="h-[168px] w-[168px] shrink-0 rounded-full" />
+            <div className="w-full flex-1 space-y-4">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <Skeleton key={i} className="h-6 w-full" />
+              ))}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }
@@ -406,11 +408,13 @@ export function Metric({
   className?: string;
 }) {
   return (
-    <div className="text-center min-w-[3.5rem]">
-      <p className={cn("text-sm font-semibold leading-none", className)}>
+    <div className="min-w-[3.25rem] text-center">
+      <p className={cn("wl-num text-[13.5px] font-semibold leading-none tabular-nums", className)}>
         {value}
       </p>
-      <p className="mt-1 text-[10px] text-muted-foreground">{label}</p>
+      <p className="mt-1 text-[10px] uppercase tracking-[0.06em] text-muted-foreground">
+        {label}
+      </p>
     </div>
   );
 }

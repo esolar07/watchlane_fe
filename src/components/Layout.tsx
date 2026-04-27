@@ -35,7 +35,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     <div className="min-h-screen bg-background">
       <a
         href="#main-content"
-        className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-[100] focus:rounded-lg focus:bg-primary focus:px-4 focus:py-2 focus:text-primary-foreground focus:shadow-lg"
+        className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-[100] focus:rounded-md focus:bg-primary focus:px-3 focus:py-1.5 focus:text-primary-foreground focus:shadow-lg"
       >
         Skip to content
       </a>
@@ -55,12 +55,12 @@ export function AppShell({ children }: { children: ReactNode }) {
       <main
         id="main-content"
         className={cn(
-          "pt-16 transition-all duration-300",
-          "pl-0 md:pl-[240px]",
-          collapsed && "md:pl-[68px]",
+          "pt-12 transition-all duration-200",
+          "pl-0 md:pl-[220px]",
+          collapsed && "md:pl-[60px]",
         )}
       >
-        <div className="p-4 md:p-6">{children}</div>
+        <div className="mx-auto max-w-[1280px] px-4 py-6 md:px-8 md:py-8">{children}</div>
       </main>
     </div>
   );

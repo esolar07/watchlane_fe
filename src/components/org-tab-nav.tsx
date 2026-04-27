@@ -21,8 +21,8 @@ export function OrgTabNav({
   const base = `/organizations/${orgId}`;
 
   return (
-    <div className="flex items-end justify-between border-b">
-      <nav className="flex gap-1" aria-label="Organization navigation">
+    <div className="flex items-end justify-between border-b border-border">
+      <nav className="flex gap-0" aria-label="Organization navigation">
         {tabs.map((tab) => {
           const href = tab.href ? `${base}/${tab.href}` : base;
           const isActive = tab.href
@@ -34,14 +34,17 @@ export function OrgTabNav({
               key={tab.label}
               href={href}
               className={cn(
-                "flex items-center gap-2 border-b-2 px-4 py-2.5 text-sm font-medium transition-colors",
+                "relative flex items-center gap-1.5 px-3 py-2.5 text-[13px] font-medium transition-colors",
                 isActive
-                  ? "border-primary text-primary"
-                  : "border-transparent text-muted-foreground hover:text-foreground"
+                  ? "text-foreground"
+                  : "text-muted-foreground hover:text-foreground",
               )}
             >
-              <tab.icon className="h-4 w-4" />
+              <tab.icon className="h-3.5 w-3.5" />
               {tab.label}
+              {isActive && (
+                <span className="absolute inset-x-2 -bottom-px h-0.5 bg-primary" />
+              )}
             </Link>
           );
         })}

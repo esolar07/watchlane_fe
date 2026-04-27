@@ -2,7 +2,17 @@
 
 import { useEffect, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
-import { Building2, Plus, Crown, Shield, User, Mail, MailCheck, Clock } from "lucide-react";
+import {
+  Building2,
+  Plus,
+  Crown,
+  Shield,
+  User,
+  Mail,
+  MailCheck,
+  Clock,
+  ChevronRight,
+} from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import {
   Card,
@@ -30,6 +40,7 @@ import {
 } from "@/services/api";
 import { useAuth } from "@/components/AuthProvider";
 import type { OrganizationDetail } from "@/types/organization";
+import { cn } from "@/lib/utils";
 
 const roleIcons: Record<string, typeof Crown> = {
   OWNER: Crown,
@@ -48,9 +59,9 @@ function formatDate(dateString: string) {
 export default function OrganizationsPage() {
   const router = useRouter();
   const { organizations: authOrgs } = useAuth();
-  const canCreateOrg = authOrgs.some(
-    (o) => o.role === "OWNER" || o.role === "ADMIN"
-  ) || authOrgs.length === 0;
+  const canCreateOrg =
+    authOrgs.some((o) => o.role === "OWNER" || o.role === "ADMIN") ||
+    authOrgs.length === 0;
   const [orgs, setOrgs] = useState<OrganizationDetail[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -75,7 +86,6 @@ export default function OrganizationsPage() {
       setError("Organization name is required.");
       return;
     }
-
     setError("");
     setIsSubmitting(true);
     try {
@@ -92,11 +102,7 @@ export default function OrganizationsPage() {
       });
       setOrgs((prev) => [
         ...prev,
-        {
-          ...newOrg,
-          planTier: "FREE",
-          createdAt: new Date().toISOString(),
-        },
+        { ...newOrg, planTier: "FREE", createdAt: new Date().toISOString() },
       ]);
       setName("");
       setSlaEnabled(true);
@@ -104,7 +110,9 @@ export default function OrganizationsPage() {
       setDialogOpen(false);
     } catch (err) {
       setError(
-        err instanceof Error ? err.message : "Something went wrong. Please try again."
+        err instanceof Error
+          ? err.message
+          : "Something went wrong. Please try again.",
       );
     } finally {
       setIsSubmitting(false);
@@ -134,52 +142,61 @@ export default function OrganizationsPage() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-24">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+        <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
       </div>
     );
   }
 
   if (orgs.length === 0) {
     return (
-      <div className="flex items-center justify-center py-24">
-        <Card className="max-w-md text-center">
-          <CardContent className="flex flex-col items-center gap-4 pt-6">
-            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
-              <Building2 className="h-6 w-6 text-primary" />
+      <div className="mx-auto max-w-md py-12">
+        <Card className="gap-0 py-0 shadow-none">
+          <CardContent className="flex flex-col items-center gap-4 px-6 py-10 text-center">
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-muted">
+              <Building2 className="h-5 w-5 text-muted-foreground" />
             </div>
             <div>
-              <h3 className="text-lg font-semibold">
+              <h3 className="text-[15px] font-semibold tracking-tight">
                 {canCreateOrg
                   ? "Create your first organization"
                   : "No organizations yet"}
               </h3>
-              <p className="mt-1 text-sm text-muted-foreground">
+              <p className="mt-1 text-[13px] text-muted-foreground">
                 {canCreateOrg
-                  ? "Organizations help you manage email accounts and collaborate with your team."
-                  : "You don\u2019t belong to any organizations yet. Ask an admin to invite you."}
+                  ? "Organizations group mailboxes and team members."
+                  : "Ask an admin to invite you to one."}
               </p>
             </div>
             {canCreateOrg && (
-              <form onSubmit={handleCreate} className="w-full space-y-5 text-left">
-                <div className="space-y-3">
-                  <h4 className="text-sm font-medium text-muted-foreground">Organization Details</h4>
-                  <div className="grid gap-2">
-                    <Label htmlFor="org-name">Organization name</Label>
-                    <Input
-                      id="org-name"
-                      placeholder="e.g. Acme Corp"
-                      value={name}
-                      onChange={(e) => setName(e.target.value)}
-                      disabled={isSubmitting}
-                      autoFocus
-                    />
-                  </div>
+              <form
+                onSubmit={handleCreate}
+                className="w-full space-y-5 pt-2 text-left"
+              >
+                <div className="grid gap-2">
+                  <Label
+                    htmlFor="org-name"
+                    className="text-[12px] font-medium"
+                  >
+                    Organization name
+                  </Label>
+                  <Input
+                    id="org-name"
+                    placeholder="e.g. Acme Corp"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    disabled={isSubmitting}
+                    autoFocus
+                  />
                 </div>
 
-                <div className="space-y-3 border-t pt-4">
-                  <h4 className="text-sm font-medium text-muted-foreground">SLA Settings</h4>
+                <div className="space-y-3 border-t border-border pt-4">
                   <div className="flex items-center justify-between">
-                    <Label htmlFor="sla-enabled">Enable SLA tracking</Label>
+                    <Label
+                      htmlFor="sla-enabled"
+                      className="text-[12px] font-medium"
+                    >
+                      Enable SLA tracking
+                    </Label>
                     <Switch
                       id="sla-enabled"
                       checked={slaEnabled}
@@ -189,18 +206,25 @@ export default function OrganizationsPage() {
                   </div>
                   {slaEnabled && (
                     <div className="grid gap-2">
-                      <Label htmlFor="sla-minutes">SLA response time (minutes)</Label>
+                      <Label
+                        htmlFor="sla-minutes"
+                        className="text-[12px] font-medium"
+                      >
+                        SLA target (minutes)
+                      </Label>
                       <div className="relative">
-                        <Clock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                        <Clock className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
                         <Input
                           id="sla-minutes"
                           type="number"
                           min={1}
                           placeholder="120"
                           value={slaMinutes}
-                          onChange={(e) => setSlaMinutes(Number(e.target.value))}
+                          onChange={(e) =>
+                            setSlaMinutes(Number(e.target.value))
+                          }
                           disabled={isSubmitting}
-                          className="pl-9"
+                          className="pl-8"
                         />
                       </div>
                     </div>
@@ -208,19 +232,16 @@ export default function OrganizationsPage() {
                 </div>
 
                 {error && (
-                  <p className="text-sm text-destructive" role="alert">
+                  <p className="text-[12px] text-destructive" role="alert">
                     {error}
                   </p>
                 )}
-                <Button type="submit" disabled={isSubmitting} className="w-full">
-                  {isSubmitting ? (
-                    <span className="flex items-center gap-2">
-                      <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                      Creating...
-                    </span>
-                  ) : (
-                    "Create organization"
-                  )}
+                <Button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="w-full"
+                >
+                  {isSubmitting ? "Creating…" : "Create organization"}
                 </Button>
               </form>
             )}
@@ -234,31 +255,38 @@ export default function OrganizationsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Organizations</h1>
-          <p className="text-sm text-muted-foreground">
+          <h1 className="text-[22px] font-semibold tracking-tight">
+            Organizations
+          </h1>
+          <p className="mt-0.5 text-[13px] text-muted-foreground">
             Manage your organizations and team access.
           </p>
         </div>
-        {canCreateOrg && <Dialog open={dialogOpen} onOpenChange={resetAndClose}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="mr-2 h-4 w-4" />
-              New organization
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-[420px]">
-            <DialogHeader>
-              <DialogTitle>Create organization</DialogTitle>
-              <DialogDescription>
-                Add a new organization to manage email accounts and team
-                members.
-              </DialogDescription>
-            </DialogHeader>
-            <form onSubmit={handleCreate} className="grid gap-5">
-              <div className="space-y-3">
-                <h4 className="text-sm font-medium text-muted-foreground">Organization Details</h4>
+        {canCreateOrg && (
+          <Dialog open={dialogOpen} onOpenChange={resetAndClose}>
+            <DialogTrigger asChild>
+              <Button size="sm" className="h-8">
+                <Plus className="mr-1.5 h-3.5 w-3.5" />
+                New
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[420px]">
+              <DialogHeader>
+                <DialogTitle className="text-[15px]">
+                  Create organization
+                </DialogTitle>
+                <DialogDescription className="text-[12.5px]">
+                  Organizations group mailboxes and team members.
+                </DialogDescription>
+              </DialogHeader>
+              <form onSubmit={handleCreate} className="grid gap-5">
                 <div className="grid gap-2">
-                  <Label htmlFor="new-org-name">Organization name</Label>
+                  <Label
+                    htmlFor="new-org-name"
+                    className="text-[12px] font-medium"
+                  >
+                    Organization name
+                  </Label>
                   <Input
                     id="new-org-name"
                     placeholder="e.g. Acme Corp"
@@ -268,129 +296,140 @@ export default function OrganizationsPage() {
                     autoFocus
                   />
                 </div>
-              </div>
 
-              <div className="space-y-3 border-t pt-4">
-                <h4 className="text-sm font-medium text-muted-foreground">SLA Settings</h4>
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="dialog-sla-enabled">Enable SLA tracking</Label>
-                  <Switch
-                    id="dialog-sla-enabled"
-                    checked={slaEnabled}
-                    onCheckedChange={setSlaEnabled}
-                    disabled={isSubmitting}
-                  />
-                </div>
-                {slaEnabled && (
-                  <div className="grid gap-2">
-                    <Label htmlFor="dialog-sla-minutes">SLA response time (minutes)</Label>
-                    <div className="relative">
-                      <Clock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                      <Input
-                        id="dialog-sla-minutes"
-                        type="number"
-                        min={1}
-                        placeholder="120"
-                        value={slaMinutes}
-                        onChange={(e) => setSlaMinutes(Number(e.target.value))}
-                        disabled={isSubmitting}
-                        className="pl-9"
-                      />
-                    </div>
+                <div className="space-y-3 border-t border-border pt-4">
+                  <div className="flex items-center justify-between">
+                    <Label
+                      htmlFor="dialog-sla-enabled"
+                      className="text-[12px] font-medium"
+                    >
+                      Enable SLA tracking
+                    </Label>
+                    <Switch
+                      id="dialog-sla-enabled"
+                      checked={slaEnabled}
+                      onCheckedChange={setSlaEnabled}
+                      disabled={isSubmitting}
+                    />
                   </div>
-                )}
-              </div>
-
-              {error && (
-                <p className="text-sm text-destructive" role="alert">
-                  {error}
-                </p>
-              )}
-              <DialogFooter>
-                <Button type="submit" disabled={isSubmitting}>
-                  {isSubmitting ? (
-                    <span className="flex items-center gap-2">
-                      <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                      Creating...
-                    </span>
-                  ) : (
-                    "Create organization"
+                  {slaEnabled && (
+                    <div className="grid gap-2">
+                      <Label
+                        htmlFor="dialog-sla-minutes"
+                        className="text-[12px] font-medium"
+                      >
+                        SLA target (minutes)
+                      </Label>
+                      <div className="relative">
+                        <Clock className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+                        <Input
+                          id="dialog-sla-minutes"
+                          type="number"
+                          min={1}
+                          placeholder="120"
+                          value={slaMinutes}
+                          onChange={(e) =>
+                            setSlaMinutes(Number(e.target.value))
+                          }
+                          disabled={isSubmitting}
+                          className="pl-8"
+                        />
+                      </div>
+                    </div>
                   )}
-                </Button>
-              </DialogFooter>
-            </form>
-          </DialogContent>
-        </Dialog>}
+                </div>
+
+                {error && (
+                  <p className="text-[12px] text-destructive" role="alert">
+                    {error}
+                  </p>
+                )}
+                <DialogFooter>
+                  <Button type="submit" disabled={isSubmitting} size="sm">
+                    {isSubmitting ? "Creating…" : "Create"}
+                  </Button>
+                </DialogFooter>
+              </form>
+            </DialogContent>
+          </Dialog>
+        )}
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {orgs.map((org) => {
-          const RoleIcon = roleIcons[org.role] ?? User;
-          return (
-            <Card
-              key={org.id}
-              className="cursor-pointer transition-shadow hover:shadow-md"
-              onClick={() => router.push(`/organizations/${org.id}`)}
-            >
-              <CardHeader className="flex flex-row items-start justify-between space-y-0">
-                <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
-                    <Building2 className="h-5 w-5 text-primary" />
+      <Card className="gap-0 py-0 shadow-none">
+        <ul className="divide-y divide-border">
+          {orgs.map((org) => {
+            const RoleIcon = roleIcons[org.role] ?? User;
+            return (
+              <li key={org.id}>
+                <button
+                  type="button"
+                  onClick={() => router.push(`/organizations/${org.id}`)}
+                  className="group flex w-full items-center gap-4 px-4 py-3.5 text-left transition-colors hover:bg-muted/40 focus-visible:bg-muted/40 focus-visible:outline-none"
+                >
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-border bg-muted/50">
+                    <Building2 className="h-3.5 w-3.5 text-muted-foreground" />
                   </div>
-                  <div>
-                    <CardTitle className="text-base">{org.name}</CardTitle>
-                    <CardDescription className="mt-0.5 text-xs">
+
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <p className="truncate text-[13.5px] font-medium leading-none">
+                        {org.name}
+                      </p>
+                      <span className="inline-flex h-5 items-center gap-1 rounded border border-border bg-muted/50 px-1.5 text-[10.5px] font-medium uppercase tracking-wide text-muted-foreground">
+                        <RoleIcon className="h-2.5 w-2.5" />
+                        {org.role}
+                      </span>
+                      <span className="inline-flex h-5 items-center rounded border border-border bg-muted/50 px-1.5 text-[10.5px] font-medium uppercase tracking-wide text-muted-foreground">
+                        {org.planTier}
+                      </span>
+                    </div>
+                    <p className="mt-1 text-[11.5px] text-muted-foreground">
                       Created {formatDate(org.createdAt)}
-                    </CardDescription>
+                    </p>
                   </div>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-3 pt-0">
-                <div className="flex items-center justify-between">
-                  <span className="inline-flex items-center gap-1.5 rounded-full bg-muted px-2.5 py-0.5 text-xs font-medium text-muted-foreground">
-                    <RoleIcon className="h-3 w-3" />
-                    {org.role}
-                  </span>
-                  <span className="rounded-full bg-muted px-2.5 py-0.5 text-xs font-medium text-muted-foreground">
-                    {org.planTier}
-                  </span>
-                </div>
-                {org.mailboxConnected ? (
-                  <div className="flex items-center gap-2 rounded-md border border-green-200 bg-green-50 px-3 py-2 dark:border-green-900/50 dark:bg-green-900/20">
-                    <MailCheck className="h-4 w-4 text-green-600 dark:text-green-400" />
-                    <span className="text-sm font-medium text-green-700 dark:text-green-400">
-                      Mailbox connected
-                    </span>
-                  </div>
-                ) : (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="w-full"
-                    disabled={connectingOrgId === org.id}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleConnectMailbox(org.id);
-                    }}
-                  >
-                    {connectingOrgId === org.id ? (
-                      <span className="flex items-center gap-2">
-                        <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                        Connecting...
+
+                  <div className="flex items-center gap-2">
+                    {org.mailboxConnected ? (
+                      <span className="inline-flex h-7 items-center gap-1.5 rounded-md border border-emerald-200 bg-emerald-50 px-2.5 text-[12px] font-medium text-emerald-700 dark:border-emerald-900/50 dark:bg-emerald-900/20 dark:text-emerald-400">
+                        <MailCheck className="h-3.5 w-3.5" />
+                        Connected
                       </span>
                     ) : (
-                      <span className="flex items-center gap-2">
-                        <Mail className="h-4 w-4" />
-                        Connect mailbox
-                      </span>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-7 px-2.5 text-[12px]"
+                        disabled={connectingOrgId === org.id}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleConnectMailbox(org.id);
+                        }}
+                      >
+                        {connectingOrgId === org.id ? (
+                          <span className="flex items-center gap-1.5">
+                            <span className="h-3 w-3 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                            Connecting…
+                          </span>
+                        ) : (
+                          <span className="flex items-center gap-1.5">
+                            <Mail className="h-3.5 w-3.5" />
+                            Connect
+                          </span>
+                        )}
+                      </Button>
                     )}
-                  </Button>
-                )}
-              </CardContent>
-            </Card>
-          );
-        })}
-      </div>
+                    <ChevronRight
+                      className={cn(
+                        "h-4 w-4 text-muted-foreground transition-transform group-hover:translate-x-0.5",
+                      )}
+                    />
+                  </div>
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      </Card>
     </div>
   );
 }

@@ -27,9 +27,7 @@ export default function SignupPage() {
       const { microsoft } = await getAuthUrls();
       window.location.href = microsoft;
     } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Failed to start sign up"
-      );
+      setError(err instanceof Error ? err.message : "Failed to start sign up");
     } finally {
       setIsLoading(false);
     }
@@ -37,132 +35,119 @@ export default function SignupPage() {
 
   return (
     <div className="flex min-h-screen bg-background">
-      {/* ── Left side: Value + Trust ── */}
-      <div className="hidden md:flex md:w-2/5 lg:w-1/2 bg-primary text-primary-foreground">
-        <div className="flex flex-col justify-between w-full px-10 lg:px-12 xl:px-20 py-16">
-          {/* Top content */}
+      {/* ── Left: pitch ── */}
+      <aside className="hidden border-r border-border bg-muted/30 md:flex md:w-2/5 lg:w-1/2">
+        <div className="flex w-full flex-col justify-between px-10 py-14 lg:px-14 xl:px-20">
           <div>
             <Image
               src="/logo.svg"
               alt="WatchLane"
-              width={160}
-              height={40}
-              className="mb-10 brightness-0 invert"
+              width={36}
+              height={36}
+              className="mb-12 rounded-md"
               priority
             />
 
-            <p className="text-xs font-semibold tracking-[0.2em] uppercase text-primary-foreground/60 mb-6">
-              Email SLA Monitoring
+            <p className="mb-5 text-[10.5px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+              Email SLA monitoring
             </p>
-
-            <h1 className="text-3xl lg:text-4xl xl:text-5xl font-bold leading-tight tracking-tight mb-6">
+            <h1 className="mb-5 text-[36px] font-semibold leading-[1.1] tracking-tight lg:text-[40px]">
               Stop guessing.
               <br />
               Start measuring.
             </h1>
-
-            <p className="text-base lg:text-lg text-primary-foreground/70 leading-relaxed max-w-lg mb-12">
-              Watchlane tracks response times, surfaces SLA breaches, and shows
+            <p className="mb-12 max-w-md text-[14px] leading-relaxed text-muted-foreground">
+              WatchLane tracks response times, surfaces SLA breaches, and shows
               exactly who owns every email thread — in real time.
             </p>
 
-            {/* Value bullets */}
-            <div className="space-y-4">
-              <div className="flex items-center gap-3">
-                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-primary-foreground/20">
-                  <Clock className="h-4 w-4" aria-hidden="true" />
-                </div>
-                <span className="text-sm font-medium">Live SLA countdowns</span>
-              </div>
-              <div className="flex items-center gap-3">
-                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-primary-foreground/20">
-                  <AlertTriangle className="h-4 w-4" aria-hidden="true" />
-                </div>
-                <span className="text-sm font-medium">
-                  Breach &amp; at-risk alerts
-                </span>
-              </div>
-              <div className="flex items-center gap-3">
-                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-primary-foreground/20">
-                  <BarChart3 className="h-4 w-4" aria-hidden="true" />
-                </div>
-                <span className="text-sm font-medium">
-                  Performance visibility by rep
-                </span>
-              </div>
-            </div>
+            <ul className="space-y-3.5">
+              {[
+                { icon: Clock, label: "Live SLA countdowns" },
+                { icon: AlertTriangle, label: "Breach & at-risk alerts" },
+                { icon: BarChart3, label: "Performance visibility by rep" },
+              ].map(({ icon: Icon, label }) => (
+                <li key={label} className="flex items-center gap-3">
+                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-border bg-card">
+                    <Icon className="h-3.5 w-3.5 text-foreground" />
+                  </span>
+                  <span className="text-[13.5px] font-medium">{label}</span>
+                </li>
+              ))}
+            </ul>
           </div>
 
-          {/* Bottom trust signal */}
-          <div className="flex items-center gap-2 text-xs text-primary-foreground/50">
-            <Shield className="h-3.5 w-3.5" aria-hidden="true" />
-            <span>Secure Microsoft authentication. No passwords stored.</span>
+          <div className="flex items-center gap-2 text-[11.5px] text-muted-foreground">
+            <Shield className="h-3 w-3" />
+            <span>
+              Secure Microsoft authentication. No passwords stored.
+            </span>
           </div>
         </div>
-      </div>
+      </aside>
 
-      {/* ── Right side: Form ── */}
-      <main className="flex w-full md:w-3/5 lg:w-1/2 items-center justify-center px-6 sm:px-12">
-        <div className="w-full max-w-sm">
+      {/* ── Right: form ── */}
+      <main className="flex w-full items-center justify-center px-6 sm:px-12 md:w-3/5 lg:w-1/2">
+        <div className="w-full max-w-[380px]">
           {/* Mobile logo */}
-          <div className="mb-10 md:hidden">
+          <div className="mb-8 md:hidden">
             <Image
               src="/logo.svg"
               alt="WatchLane"
-              width={140}
+              width={36}
               height={36}
+              className="rounded-md"
               priority
             />
           </div>
 
-          {/* Mobile value proposition — visible below md */}
+          {/* Mobile pitch */}
           <div className="mb-8 md:hidden">
-            <p className="text-xs font-semibold tracking-[0.2em] uppercase text-muted-foreground mb-3">
-              Email SLA Monitoring
+            <p className="mb-2 text-[10.5px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+              Email SLA monitoring
             </p>
-            <p className="text-xl font-bold tracking-tight text-foreground leading-snug mb-3">
-              Stop guessing.<br />Start measuring.
-            </p>
-            <p className="text-sm text-muted-foreground leading-relaxed">
-              Track response times, surface SLA breaches, and see exactly who
-              owns every thread — in real time.
+            <h1 className="mb-2 text-[24px] font-semibold leading-tight tracking-tight">
+              Stop guessing. Start measuring.
+            </h1>
+            <p className="text-[13px] text-muted-foreground">
+              Track response times, surface SLA breaches, see thread ownership.
             </p>
           </div>
 
-          <h2 className="text-2xl font-bold tracking-tight mb-2">
+          <h2 className="text-[18px] font-semibold tracking-tight">
             Create your account
           </h2>
-          <p className="text-sm text-muted-foreground mb-8">
-            Sign in with your work Microsoft account
+          <p className="mt-1 text-[13px] text-muted-foreground">
+            Sign in with your work Microsoft account.
           </p>
 
           {error && (
             <div
               role="alert"
               aria-live="assertive"
-              className="mb-6 rounded-lg bg-destructive/10 px-4 py-3 text-sm text-destructive flex items-center gap-2"
+              className="mt-5 flex items-center gap-2 rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2 text-[12.5px] text-destructive"
             >
-              <AlertTriangle className="h-4 w-4 shrink-0" aria-hidden="true" />
+              <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
               {error}
             </div>
           )}
 
           <Button
-            className="w-full h-11 text-sm font-medium"
+            className="mt-6 h-10 w-full"
             disabled={isLoading}
             onClick={handleMicrosoftSignUp}
           >
             {isLoading ? (
               <span className="flex items-center gap-2">
-                <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                Redirecting...
+                <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                Redirecting…
               </span>
             ) : (
               <span className="flex items-center gap-2">
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
-                  width="16"
-                  height="16"
+                  width="14"
+                  height="14"
                   viewBox="0 0 23 23"
                   fill="none"
                   aria-hidden="true"
@@ -177,16 +162,15 @@ export default function SignupPage() {
             )}
           </Button>
 
-          <p className="mt-4 text-xs text-muted-foreground">
+          <p className="mt-3 text-[11.5px] text-muted-foreground">
             We&apos;ll never post or send emails on your behalf.
           </p>
 
-          {/* Divider + login link */}
-          <div className="mt-10 pt-6 border-t border-border text-center text-sm text-muted-foreground">
+          <div className="mt-10 border-t border-border pt-5 text-center text-[12.5px] text-muted-foreground">
             Already have an account?{" "}
             <Link
               href="/login"
-              className="font-medium text-primary underline-offset-2 hover:underline"
+              className="font-medium text-foreground underline-offset-4 hover:underline"
             >
               Sign in
             </Link>
