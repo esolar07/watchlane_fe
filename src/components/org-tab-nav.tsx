@@ -2,11 +2,13 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BarChart3, Settings } from "lucide-react";
+import { Activity, BarChart3, Settings, ShieldAlert } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const tabs = [
-  { label: "Coverage", href: "coverage", icon: BarChart3 },
+  { label: "Operational", href: "operational", icon: Activity },
+  { label: "Performance", href: "performance", icon: BarChart3 },
+  { label: "Rules", href: "rules", icon: ShieldAlert },
   { label: "Settings", href: "", icon: Settings },
 ] as const;
 

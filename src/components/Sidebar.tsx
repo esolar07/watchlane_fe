@@ -9,6 +9,7 @@ import {
   Building2,
   Mail,
   Settings,
+  HelpCircle,
   ChevronLeft,
   ChevronRight,
   X,
@@ -25,6 +26,7 @@ const navItems = [
   { label: "Organizations", href: "/organizations", icon: Building2 },
   { label: "Email Accounts", href: "/email-accounts", icon: Mail },
   { label: "Settings", href: "/settings", icon: Settings },
+  { label: "Help", href: "/help", icon: HelpCircle },
 ];
 
 interface SidebarProps {

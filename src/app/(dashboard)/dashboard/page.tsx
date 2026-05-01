@@ -1,29 +1,42 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import {
   AlertOctagon,
-  Inbox,
+  AlertTriangle,
   Building2,
+  CheckCircle2,
   ChevronRight,
+  Clock,
+  Inbox,
+  RefreshCw,
+  ShieldAlert,
+  Timer,
 } from "lucide-react";
-import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { useCoverageMetrics } from "@/hooks/useCoverageMetrics";
-import { cn, formatMinutes } from "@/lib/utils";
-import { type CoverageMetrics } from "@/types/dashboard";
 import {
-  aggregate,
-  complianceBadge,
-  KpiCards,
-  BreakdownSection,
-  CoverageSkeleton,
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { HelpTooltip } from "@/components/ui/help-tooltip";
+import { useAuth } from "@/components/AuthProvider";
+import { useAggregateDashboard } from "@/hooks/useAggregateDashboard";
+import {
+  useAllOperationalDashboards,
+  type OperationalEntry,
+} from "@/hooks/useAllOperationalDashboards";
+import {
   Metric,
+  complianceColor,
+  complianceBg,
 } from "@/components/coverage-metrics";
-
-// ── Date presets ──
+import { SnapshotBreakdown } from "@/components/snapshot-breakdown";
+import { cn, formatMinutes } from "@/lib/utils";
+import type { AggregateDashboard } from "@/types/dashboard";
+import type { Organization } from "@/types/organization";
 
 type DatePreset = "today" | "7d" | "30d" | "90d";
 
@@ -39,177 +52,449 @@ function getDateRange(preset: DatePreset) {
   end.setHours(23, 59, 59, 999);
   const start = new Date();
   start.setHours(0, 0, 0, 0);
-
-  switch (preset) {
-    case "today":
-      break;
-    case "7d":
-      start.setDate(start.getDate() - 6);
-      break;
-    case "30d":
-      start.setDate(start.getDate() - 29);
-      break;
-    case "90d":
-      start.setDate(start.getDate() - 89);
-      break;
-  }
+  if (preset === "7d") start.setDate(start.getDate() - 6);
+  if (preset === "30d") start.setDate(start.getDate() - 29);
+  if (preset === "90d") start.setDate(start.getDate() - 89);
   return { startDate: start.toISOString(), endDate: end.toISOString() };
 }
 
-// ── Clickable org row ──
+export default function DashboardPage() {
+  const { organizations } = useAuth();
+  const orgs = useMemo(
+    () => organizations.map((o) => ({ id: o.id, name: o.name })),
+    [organizations],
+  );
+  const [datePreset, setDatePreset] = useState<DatePreset>("7d");
+  const { startDate, endDate } = useMemo(
+    () => getDateRange(datePreset),
+    [datePreset],
+  );
 
-function OrgRow({ org }: { org: CoverageMetrics }) {
-  const pct = org.compliancePercent;
+  const aggregate = useAggregateDashboard({ startDate, endDate });
+  const perOrg = useAllOperationalDashboards(orgs);
+
+  const isRefreshing = aggregate.isLoading || perOrg.isLoading;
+
+  function refetchAll() {
+    aggregate.refetch();
+    perOrg.refetch();
+  }
+
+  return (
+    <div className="space-y-6">
+      <DashboardHeader
+        datePreset={datePreset}
+        onDatePresetChange={setDatePreset}
+        onRefresh={refetchAll}
+        isRefreshing={isRefreshing}
+      />
+      {organizations.length === 0 ? (
+        <EmptyOrgsState />
+      ) : aggregate.error ? (
+        <ErrorBanner message={aggregate.error} />
+      ) : aggregate.isLoading && !aggregate.data ? (
+        <LoadingState />
+      ) : aggregate.data ? (
+        <>
+          <SnapshotSection data={aggregate.data} />
+          <PeriodSection data={aggregate.data} />
+          {organizations.length > 1 && (
+            <OrgList organizations={organizations} entries={perOrg.entries} />
+          )}
+        </>
+      ) : null}
+    </div>
+  );
+}
+
+interface DashboardHeaderProps {
+  datePreset: DatePreset;
+  onDatePresetChange: (next: DatePreset) => void;
+  onRefresh: () => void;
+  isRefreshing: boolean;
+}
+
+function DashboardHeader({
+  datePreset,
+  onDatePresetChange,
+  onRefresh,
+  isRefreshing,
+}: DashboardHeaderProps) {
+  return (
+    <div className="sticky top-0 z-10 -mx-1 flex flex-col gap-4 bg-background/95 px-1 pb-4 pt-1 backdrop-blur-sm sm:flex-row sm:items-center sm:justify-between">
+      <div>
+        <h1 className="text-2xl font-semibold tracking-tight">Dashboard</h1>
+        <p className="text-sm text-muted-foreground">
+          Snapshot across all organizations.
+        </p>
+      </div>
+      <div className="flex items-center gap-2">
+        <DateFilter value={datePreset} onChange={onDatePresetChange} />
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={onRefresh}
+          disabled={isRefreshing}
+        >
+          <RefreshCw
+            className={cn("mr-1.5 h-3.5 w-3.5", isRefreshing && "animate-spin")}
+          />
+          Refresh
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+function DateFilter({
+  value,
+  onChange,
+}: {
+  value: DatePreset;
+  onChange: (next: DatePreset) => void;
+}) {
+  return (
+    <div className="flex items-center rounded-lg border bg-card p-0.5">
+      {presets.map((p) => (
+        <Button
+          key={p.value}
+          variant={value === p.value ? "default" : "ghost"}
+          size="sm"
+          onClick={() => onChange(p.value)}
+          className={cn(
+            "h-8 rounded-md px-3 text-xs font-medium",
+            value !== p.value && "text-muted-foreground",
+          )}
+        >
+          {p.label}
+        </Button>
+      ))}
+    </div>
+  );
+}
+
+function LoadingState() {
+  return (
+    <div className="flex items-center justify-center py-24">
+      <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+    </div>
+  );
+}
+
+function EmptyOrgsState() {
   return (
     <Card>
-      <CardContent className="py-4">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-center gap-3">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-muted">
-              <Building2 className="h-4 w-4 text-muted-foreground" />
-            </div>
-            <div>
-              <p className="font-medium leading-none">
-                {org.organizationName}
-              </p>
-              <p className="mt-1 text-xs text-muted-foreground">
-                SLA: {formatMinutes(org.slaTarget)}
-              </p>
-            </div>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-3 sm:gap-5">
-            <Badge
-              variant="outline"
-              className={cn("text-xs font-semibold", complianceBadge(pct))}
-            >
-              {pct.toFixed(1)}%
-            </Badge>
-            <Metric label="Inbound" value={org.totalInbound} />
-            <Metric
-              label="Covered"
-              value={org.coveredWithinSla}
-              className="text-emerald-600"
-            />
-            <Metric
-              label="Breaches"
-              value={org.breaches}
-              className={org.breaches > 0 ? "text-red-600" : undefined}
-            />
-            <Metric
-              label="At Risk"
-              value={org.atRisk}
-              className={org.atRisk > 0 ? "text-amber-600" : undefined}
-            />
-            <Metric
-              label="Avg Resp."
-              value={formatMinutes(org.avgResponseMinutes)}
-            />
-          </div>
+      <CardContent className="flex flex-col items-center gap-3 py-16 text-center">
+        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-muted">
+          <Building2 className="h-6 w-6 text-muted-foreground" />
         </div>
-
-        <div className="mt-3 flex justify-end">
-          <Link
-            href={`/organizations/${org.organizationId}/coverage`}
-            className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline"
-          >
-            View organization details
-            <ChevronRight className="h-4 w-4" />
-          </Link>
-        </div>
+        <h3 className="text-sm font-medium">No organizations</h3>
+        <p className="text-sm text-muted-foreground">
+          Create or join an organization to see live activity here.
+        </p>
       </CardContent>
     </Card>
   );
 }
 
-// ── Main page ──
-
-export default function DashboardPage() {
-  const [datePreset, setDatePreset] = useState<DatePreset>("7d");
-
-  const { startDate, endDate } = useMemo(
-    () => getDateRange(datePreset),
-    [datePreset]
-  );
-
-  const { data, isLoading, error } = useCoverageMetrics({ startDate, endDate });
-
-  const agg = useMemo(() => aggregate(data), [data]);
-  const slaTarget = data.length === 1 ? data[0].slaTarget : null;
-
+function ErrorBanner({ message }: { message: string }) {
   return (
-    <div className="space-y-6">
-      {/* ── Sticky header + date filter ── */}
-      <div className="sticky top-0 z-10 -mx-1 bg-background/95 px-1 pb-4 pt-1 backdrop-blur-sm">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <h1 className="text-2xl font-semibold tracking-tight">Dashboard</h1>
+    <Card className="border-destructive/30 bg-destructive/5">
+      <CardContent className="flex items-center gap-3 py-6">
+        <AlertOctagon className="h-5 w-5 shrink-0 text-destructive" />
+        <p className="text-sm text-destructive">{message}</p>
+      </CardContent>
+    </Card>
+  );
+}
 
-          <div className="flex items-center rounded-lg border bg-card p-0.5">
-            {presets.map((p) => (
-              <Button
-                key={p.value}
-                variant={datePreset === p.value ? "default" : "ghost"}
-                size="sm"
-                onClick={() => setDatePreset(p.value)}
-                className={cn(
-                  "h-8 rounded-md px-3 text-xs font-medium",
-                  datePreset !== p.value && "text-muted-foreground"
-                )}
-              >
-                {p.label}
-              </Button>
-            ))}
-          </div>
-        </div>
+function SectionHeading({
+  title,
+  hint,
+}: {
+  title: string;
+  hint: string;
+}) {
+  return (
+    <div className="flex items-baseline gap-3">
+      <h2 className="text-sm font-medium uppercase tracking-wide text-muted-foreground">
+        {title}
+      </h2>
+      <span className="text-xs text-muted-foreground/70">{hint}</span>
+    </div>
+  );
+}
+
+function SnapshotSection({ data }: { data: AggregateDashboard }) {
+  return (
+    <section aria-label="Snapshot" className="space-y-4">
+      <SectionHeading title="Right now" hint="Live snapshot" />
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <KpiTile
+          label="Open"
+          helpText="Threads currently uncovered across all organizations."
+          helpLink="/help#coverage"
+          value={data.totalOpenThreads}
+          icon={Inbox}
+        />
+        <KpiTile
+          label="Overdue"
+          helpText="Threads currently past SLA awaiting a reply."
+          helpLink="/help#breach"
+          value={data.totalOverdue}
+          icon={ShieldAlert}
+          valueClassName={data.totalOverdue > 0 ? "text-red-600" : undefined}
+        />
+        <KpiTile
+          label="At Risk"
+          helpText="Threads approaching the SLA window without a reply."
+          helpLink="/help#at-risk"
+          value={data.totalAtRisk}
+          icon={AlertTriangle}
+          valueClassName={data.totalAtRisk > 0 ? "text-amber-600" : undefined}
+        />
+        <KpiTile
+          label="Oldest Gap"
+          helpText="Longest-waiting open thread across all organizations."
+          helpLink="/help#oldest-gap"
+          value={data.oldestGapMinutes > 0 ? data.oldestGapFormatted : "—"}
+          icon={Timer}
+        />
       </div>
+      <SnapshotBreakdown
+        openCount={data.totalOpenThreads}
+        overdueCount={data.totalOverdue}
+        atRiskCount={data.totalAtRisk}
+      />
+    </section>
+  );
+}
 
-      {/* ── Content ── */}
-      {isLoading ? (
-        <CoverageSkeleton />
-      ) : error ? (
-        <Card className="border-destructive/30 bg-destructive/5">
-          <CardContent className="flex items-center gap-3 py-6">
-            <AlertOctagon className="h-5 w-5 shrink-0 text-destructive" />
-            <p className="text-sm text-destructive">{error}</p>
-          </CardContent>
-        </Card>
-      ) : agg.totalInbound === 0 ? (
-        <Card>
-          <CardContent className="flex flex-col items-center justify-center gap-3 py-16">
-            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-muted">
-              <Inbox className="h-6 w-6 text-muted-foreground" />
-            </div>
-            <h3 className="text-sm font-medium">
-              No inbound threads in this period
-            </h3>
-            <p className="text-sm text-muted-foreground">
-              Try selecting a different date range.
-            </p>
-          </CardContent>
-        </Card>
-      ) : (
-        <>
-          {/* KPI cards */}
-          <KpiCards data={agg} slaTarget={slaTarget} />
+function PeriodSection({ data }: { data: AggregateDashboard }) {
+  return (
+    <section aria-label="Selected period" className="space-y-4">
+      <SectionHeading
+        title="In selected period"
+        hint="Historical · changes with date filter"
+      />
+      <div className="grid gap-4 md:grid-cols-2">
+        <ComplianceTile compliancePercent={data.slaCompliancePercent} />
+        <KpiTile
+          label="Avg Response Time"
+          helpText="Average time to send the first reply, across replied threads in the selected period."
+          helpLink="/help#response-time"
+          value={data.avgResponseFormatted || "—"}
+          icon={Clock}
+        />
+      </div>
+    </section>
+  );
+}
 
-          {/* Breakdown + donut */}
-          <BreakdownSection data={agg} />
+interface KpiTileProps {
+  label: string;
+  helpText: string;
+  helpLink: string;
+  value: string | number;
+  icon: typeof Inbox;
+  valueClassName?: string;
+}
 
-          {/* Per-org list */}
-          {data.length > 1 && (
-            <section aria-label="Per-organization breakdown">
-              <h2 className="mb-3 text-sm font-medium text-muted-foreground">
-                By Organization
-              </h2>
-              <div className="space-y-3">
-                {data.map((org) => (
-                  <OrgRow key={org.organizationId} org={org} />
-                ))}
-              </div>
-            </section>
-          )}
-        </>
+function KpiTile({
+  label,
+  helpText,
+  helpLink,
+  value,
+  icon: Icon,
+  valueClassName,
+}: KpiTileProps) {
+  return (
+    <Card className="transition-shadow hover:shadow-md">
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+        <CardTitle className="text-sm font-medium text-muted-foreground">
+          <HelpTooltip
+            label={label}
+            description={helpText}
+            helpLink={helpLink}
+          />
+        </CardTitle>
+        <Icon className="h-4 w-4 text-muted-foreground" />
+      </CardHeader>
+      <CardContent className="pt-0">
+        <p className={cn("text-2xl font-bold", valueClassName)}>{value}</p>
+      </CardContent>
+    </Card>
+  );
+}
+
+function ComplianceTile({ compliancePercent }: { compliancePercent: number }) {
+  return (
+    <Card
+      className={cn(
+        "border transition-shadow hover:shadow-md",
+        complianceBg(compliancePercent),
       )}
+    >
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+        <CardTitle className="text-sm font-medium text-muted-foreground">
+          <HelpTooltip
+            label="SLA Compliance"
+            description="Replies within SLA divided by replies in the selected period."
+            helpLink="/help#coverage"
+          />
+        </CardTitle>
+        <CheckCircle2
+          className={cn("h-4 w-4", complianceColor(compliancePercent))}
+        />
+      </CardHeader>
+      <CardContent className="pt-0">
+        <p
+          className={cn(
+            "text-2xl font-bold",
+            complianceColor(compliancePercent),
+          )}
+        >
+          {compliancePercent.toFixed(1)}%
+        </p>
+      </CardContent>
+    </Card>
+  );
+}
+
+function OrgList({
+  organizations,
+  entries,
+}: {
+  organizations: Organization[];
+  entries: OperationalEntry[];
+}) {
+  const entryByOrgId = new Map(entries.map((e) => [e.orgId, e]));
+  return (
+    <section aria-label="Per-organization snapshot" className="space-y-3">
+      <SectionHeading title="By organization" hint="Live snapshot per org" />
+      <div className="space-y-3">
+        {organizations.map((org) => (
+          <OrgRow
+            key={org.id}
+            organization={org}
+            entry={entryByOrgId.get(org.id)}
+          />
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function OrgRow({
+  organization,
+  entry,
+}: {
+  organization: Organization;
+  entry?: OperationalEntry;
+}) {
+  return (
+    <Card className="relative pb-10">
+      <CardContent className="py-4">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <OrgIdentity organization={organization} entry={entry} />
+          {entry?.data ? (
+            <OrgRowMetrics data={entry.data} />
+          ) : entry?.error ? (
+            <span className="text-xs text-destructive">{entry.error}</span>
+          ) : (
+            <span className="text-xs text-muted-foreground">Loading…</span>
+          )}
+        </div>
+      </CardContent>
+      <Link
+        href={`/organizations/${organization.id}/operational`}
+        className="absolute bottom-3 right-6 inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline"
+      >
+        Open dashboard
+        <ChevronRight className="h-4 w-4" />
+      </Link>
+    </Card>
+  );
+}
+
+function OrgIdentity({
+  organization,
+  entry,
+}: {
+  organization: Organization;
+  entry?: OperationalEntry;
+}) {
+  const slaTarget = entry?.data?.slaTarget;
+  return (
+    <div className="flex items-center gap-3">
+      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-muted">
+        <Building2 className="h-4 w-4 text-muted-foreground" />
+      </div>
+      <div>
+        <p className="font-medium leading-none">{organization.name}</p>
+        {slaTarget !== undefined && (
+          <p className="mt-1 text-xs text-muted-foreground">
+            SLA: {formatMinutes(slaTarget)}
+          </p>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function OrgRowMetrics({
+  data,
+}: {
+  data: NonNullable<OperationalEntry["data"]>;
+}) {
+  return (
+    <div className="flex flex-wrap items-center gap-3 sm:gap-5">
+      <Metric
+        label={
+          <HelpTooltip
+            label="Open"
+            description="Threads currently uncovered."
+            helpLink="/help#coverage"
+          />
+        }
+        value={data.openCount}
+      />
+      <Metric
+        label={
+          <HelpTooltip
+            label="Overdue"
+            description="Threads currently past SLA awaiting a reply."
+            helpLink="/help#breach"
+          />
+        }
+        value={data.overdueCount}
+        className={data.overdueCount > 0 ? "text-red-600" : undefined}
+      />
+      <Metric
+        label={
+          <HelpTooltip
+            label="At Risk"
+            description="Threads approaching the SLA window without a reply."
+            helpLink="/help#at-risk"
+          />
+        }
+        value={data.atRiskCount}
+        className={data.atRiskCount > 0 ? "text-amber-600" : undefined}
+      />
+      <Metric
+        label={
+          <HelpTooltip
+            label="Oldest Gap"
+            description="Longest-waiting open thread."
+            helpLink="/help#oldest-gap"
+          />
+        }
+        value={
+          data.oldestUncoveredMinutes > 0
+            ? formatMinutes(data.oldestUncoveredMinutes)
+            : "—"
+        }
+      />
     </div>
   );
 }

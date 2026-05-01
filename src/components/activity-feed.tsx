@@ -7,6 +7,8 @@ import {
   RefreshCw,
   XCircle,
   Activity,
+  Hourglass,
+  Trash2,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -14,22 +16,19 @@ import { cn } from "@/lib/utils";
 import { formatMinutes } from "@/lib/utils";
 import { type ActivityItem } from "@/types/dashboard";
 
-const ACTIVITY_PRIORITY: Record<string, number> = {
-  breach: 0,
-  at_risk: 1,
-  covered: 2,
-  sync_failed: 3,
-  sync_success: 4,
-};
-
 function activityIcon(type: ActivityItem["type"]) {
   switch (type) {
+    case "overdue":
     case "breach":
       return <ShieldAlert className="h-4 w-4 text-red-500" />;
     case "at_risk":
       return <AlertTriangle className="h-4 w-4 text-amber-500" />;
+    case "late_response":
+      return <Hourglass className="h-4 w-4 text-amber-500" />;
     case "covered":
       return <CheckCircle2 className="h-4 w-4 text-emerald-500" />;
+    case "dismissed":
+      return <Trash2 className="h-4 w-4 text-muted-foreground" />;
     case "sync_success":
       return <RefreshCw className="h-4 w-4 text-blue-500" />;
     case "sync_failed":
@@ -39,12 +38,17 @@ function activityIcon(type: ActivityItem["type"]) {
 
 function activityAccent(type: ActivityItem["type"]) {
   switch (type) {
+    case "overdue":
     case "breach":
       return "border-l-red-500";
     case "at_risk":
       return "border-l-amber-500";
+    case "late_response":
+      return "border-l-amber-400";
     case "covered":
       return "border-l-emerald-500";
+    case "dismissed":
+      return "border-l-border";
     case "sync_success":
       return "border-l-blue-500";
     case "sync_failed":
@@ -54,6 +58,12 @@ function activityAccent(type: ActivityItem["type"]) {
 
 function activityDetail(item: ActivityItem) {
   switch (item.type) {
+    case "overdue":
+      return (
+        <span className="text-red-600 font-medium">
+          {formatMinutes(item.minutesOverdue)} overdue · awaiting reply
+        </span>
+      );
     case "breach":
       return (
         <span className="text-red-600 font-medium">
@@ -66,12 +76,25 @@ function activityDetail(item: ActivityItem) {
           {formatMinutes(item.minutesRemaining)} remaining
         </span>
       );
-    case "covered":
+    case "late_response":
       return (
-        <span className="text-emerald-600 font-medium">
-          responded in {formatMinutes(item.responseMinutes)}
+        <span className="text-amber-600 font-medium">
+          replied {formatMinutes(item.minutesOverdue)} past SLA
+          {item.responseMinutes
+            ? ` · took ${formatMinutes(item.responseMinutes)}`
+            : ""}
         </span>
       );
+    case "covered":
+      return (
+        <span className="text-emerald-600">
+          {typeof item.responseMinutes === "number"
+            ? `Replied · ${formatMinutes(item.responseMinutes)}`
+            : "Replied"}
+        </span>
+      );
+    case "dismissed":
+      return <span className="text-muted-foreground">Deleted</span>;
     case "sync_success":
     case "sync_failed":
       return (
@@ -96,19 +119,8 @@ function formatTimestamp(iso: string) {
   return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
-function sortActivities(items: ActivityItem[]): ActivityItem[] {
-  return [...items].sort((a, b) => {
-    const pa = ACTIVITY_PRIORITY[a.type] ?? 99;
-    const pb = ACTIVITY_PRIORITY[b.type] ?? 99;
-    if (pa !== pb) return pa - pb;
-    return new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime();
-  });
-}
-
 export function ActivityFeed({ items }: { items: ActivityItem[] }) {
-  const sorted = sortActivities(items);
-
-  if (sorted.length === 0) {
+  if (items.length === 0) {
     return (
       <Card>
         <CardHeader>
@@ -139,12 +151,12 @@ export function ActivityFeed({ items }: { items: ActivityItem[] }) {
           Recent Activity
         </CardTitle>
         <Badge variant="secondary" className="text-xs font-medium">
-          {sorted.length}
+          {items.length}
         </Badge>
       </CardHeader>
       <CardContent className="flex-1 px-4 pb-4 pt-0">
         <div className="max-h-[480px] space-y-2 overflow-y-auto pr-1">
-          {sorted.map((item, idx) => (
+          {items.map((item, idx) => (
             <div
               key={`${item.type}-${item.timestamp}-${idx}`}
               className={cn(
@@ -154,7 +166,7 @@ export function ActivityFeed({ items }: { items: ActivityItem[] }) {
             >
               <div className="mt-0.5 shrink-0">{activityIcon(item.type)}</div>
               <div className="min-w-0 flex-1">
-                <p className="text-sm leading-snug">
+                <p className="truncate text-sm leading-snug">
                   {"subject" in item ? (
                     <>
                       <span className="font-medium">{item.subject}</span>
@@ -167,6 +179,14 @@ export function ActivityFeed({ items }: { items: ActivityItem[] }) {
                     <span>{item.message}</span>
                   )}
                 </p>
+                {"subject" in item && item.folderPath && (
+                  <p
+                    className="truncate text-xs text-muted-foreground/80"
+                    title={item.folderPath}
+                  >
+                    {item.folderPath}
+                  </p>
+                )}
                 <div className="mt-1 flex items-center gap-2 text-xs">
                   {activityDetail(item)}
                   <span className="text-muted-foreground">

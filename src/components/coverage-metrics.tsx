@@ -1,8 +1,10 @@
 "use client";
 
+import type { ReactNode } from "react";
 import { Target, CheckCircle2, Clock, Timer } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { HelpTooltip } from "@/components/ui/help-tooltip";
 import { cn, formatMinutes } from "@/lib/utils";
 import { type CoverageMetrics } from "@/types/dashboard";
 
@@ -13,6 +15,8 @@ export function aggregate(items: CoverageMetrics[]) {
   const coveredWithinSla = items.reduce((s, i) => s + i.coveredWithinSla, 0);
   const breaches = items.reduce((s, i) => s + i.breaches, 0);
   const atRisk = items.reduce((s, i) => s + i.atRisk, 0);
+  const openCount = items.reduce((s, i) => s + (i.openCount ?? 0), 0);
+  const overdueCount = items.reduce((s, i) => s + (i.overdueCount ?? 0), 0);
   const compliancePercent =
     totalInbound > 0 ? (coveredWithinSla / totalInbound) * 100 : 0;
   const avgResponseMinutes =
@@ -29,6 +33,8 @@ export function aggregate(items: CoverageMetrics[]) {
     coveredWithinSla,
     breaches,
     atRisk,
+    openCount,
+    overdueCount,
     compliancePercent,
     avgResponseMinutes,
     oldestUncoveredMinutes,
@@ -180,7 +186,11 @@ export function KpiCards({
         <Card className="transition-shadow hover:shadow-md">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              SLA Target
+              <HelpTooltip
+                label="SLA Target"
+                description="Maximum time your team has to respond to an inbound email."
+                helpLink="/help#sla"
+              />
             </CardTitle>
             <Target className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
@@ -199,7 +209,11 @@ export function KpiCards({
         >
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              Compliance
+              <HelpTooltip
+                label="Coverage"
+                description="Percentage of inbound threads that received a reply within the SLA window."
+                helpLink="/help#coverage"
+              />
             </CardTitle>
             <CheckCircle2
               className={cn(
@@ -223,7 +237,11 @@ export function KpiCards({
         <Card className="transition-shadow hover:shadow-md">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              Avg Response Time
+              <HelpTooltip
+                label="Avg Response Time"
+                description="The average time it takes your team to send the first reply to an inbound email."
+                helpLink="/help#response-time"
+              />
             </CardTitle>
             <Clock className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
@@ -237,7 +255,11 @@ export function KpiCards({
         <Card className="transition-shadow hover:shadow-md">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              Oldest Uncovered
+              <HelpTooltip
+                label="Oldest Gap"
+                description="The longest-running thread that has not yet received a reply."
+                helpLink="/help#oldest-gap"
+              />
             </CardTitle>
             <Timer
               className={cn(
@@ -304,9 +326,13 @@ export function BreakdownSection({
           {/* Stat rows */}
           <div className="flex-1 space-y-4 w-full">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 text-sm font-medium">
                 <span className="inline-block h-2.5 w-2.5 rounded-full bg-emerald-500" />
-                <span className="text-sm font-medium">Covered Within SLA</span>
+                <HelpTooltip
+                  label="Covered Within SLA"
+                  description="Inbound threads that received a reply before the SLA window expired."
+                  helpLink="/help#coverage"
+                />
               </div>
               <div className="flex items-baseline gap-1.5">
                 <span className="text-lg font-bold text-emerald-600">
@@ -319,9 +345,13 @@ export function BreakdownSection({
             </div>
 
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 text-sm font-medium">
                 <span className="inline-block h-2.5 w-2.5 rounded-full bg-red-500" />
-                <span className="text-sm font-medium">Breaches</span>
+                <HelpTooltip
+                  label="Breaches"
+                  description="Threads that exceeded the SLA without a reply."
+                  helpLink="/help#breach"
+                />
               </div>
               <div className="flex items-baseline gap-1.5">
                 <span className="text-lg font-bold text-red-600">
@@ -334,9 +364,13 @@ export function BreakdownSection({
             </div>
 
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 text-sm font-medium">
                 <span className="inline-block h-2.5 w-2.5 rounded-full bg-amber-500" />
-                <span className="text-sm font-medium">At Risk</span>
+                <HelpTooltip
+                  label="At Risk"
+                  description="Threads approaching the SLA window that have not yet been replied to."
+                  helpLink="/help#at-risk"
+                />
               </div>
               <div className="flex items-baseline gap-1.5">
                 <span className="text-lg font-bold text-amber-600">
@@ -401,7 +435,7 @@ export function Metric({
   value,
   className,
 }: {
-  label: string;
+  label: ReactNode;
   value: string | number;
   className?: string;
 }) {
@@ -410,7 +444,7 @@ export function Metric({
       <p className={cn("text-sm font-semibold leading-none", className)}>
         {value}
       </p>
-      <p className="mt-1 text-[10px] text-muted-foreground">{label}</p>
+      <div className="mt-1 text-[10px] text-muted-foreground">{label}</div>
     </div>
   );
 }
