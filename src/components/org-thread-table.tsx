@@ -1,6 +1,12 @@
 "use client";
 
-import { Folder, Inbox, Mail, User } from "lucide-react";
+import {
+  AlertTriangle,
+  Circle,
+  Inbox,
+  ShieldAlert,
+  type LucideIcon,
+} from "lucide-react";
 import {
   Card,
   CardContent,
@@ -20,10 +26,16 @@ const OWNER_PLACEHOLDER = "Unassigned";
 
 const STATUS_BADGE_CLASSES: Record<OrgThreadStatus, string> = {
   Overdue:
-    "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400",
+    "bg-red-600 text-white border-transparent shadow-sm hover:bg-red-600/90",
   "At Risk":
-    "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400",
-  Open: "bg-muted text-muted-foreground",
+    "bg-amber-500 text-white border-transparent shadow-sm hover:bg-amber-500/90",
+  Open: "bg-muted text-foreground border border-border",
+};
+
+const STATUS_ICONS: Record<OrgThreadStatus, LucideIcon> = {
+  Overdue: ShieldAlert,
+  "At Risk": AlertTriangle,
+  Open: Circle,
 };
 
 const STATUS_COUNTDOWN_CLASSES: Record<OrgThreadStatus, string> = {
@@ -32,17 +44,38 @@ const STATUS_COUNTDOWN_CLASSES: Record<OrgThreadStatus, string> = {
   Open: "text-muted-foreground",
 };
 
+function rephraseSlaCountdown(formatted: string): string {
+  return formatted
+    .replace(/\s+past\s+SLA\s*$/i, " overdue")
+    .replace(/\s+until\s+breach\s*$/i, " remaining");
+}
+
+function abbreviateOwner(name: string | null): string {
+  if (!name) return OWNER_PLACEHOLDER;
+  const parts = name.trim().split(/\s+/);
+  if (parts.length < 2) return name;
+  return `${parts[0][0]}. ${parts[parts.length - 1]}`;
+}
+
 export function OrgThreadTable({ threads }: { threads: OrgDashboardThread[] }) {
   return (
     <Card>
       <CardHeader>
         <CardTitle className="text-base">Open Threads</CardTitle>
         <CardDescription>
-          Sorted oldest-waiting first. Status reflects the live SLA state.
+          Sorted by longest waiting. Status reflects the live SLA state.
         </CardDescription>
       </CardHeader>
       <CardContent className="px-0 pb-2 pt-0">
-        {threads.length === 0 ? <EmptyThreadsState /> : <ThreadRows threads={threads} />}
+        {threads.length === 0 ? (
+          <EmptyThreadsState />
+        ) : (
+          <ul className="divide-y border-t">
+            {threads.map((thread) => (
+              <ThreadRow key={thread.threadId} thread={thread} />
+            ))}
+          </ul>
+        )}
       </CardContent>
     </Card>
   );
@@ -62,88 +95,84 @@ function EmptyThreadsState() {
   );
 }
 
-function ThreadRows({ threads }: { threads: OrgDashboardThread[] }) {
+function ThreadRow({ thread }: { thread: OrgDashboardThread }) {
+  const StatusIcon = STATUS_ICONS[thread.status];
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full text-sm">
-        <thead className="border-y bg-muted/30 text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">
-          <tr>
-            <th className="px-6 py-2.5">Status</th>
-            <th className="px-3 py-2.5">Thread</th>
-            <th className="px-3 py-2.5">From</th>
-            <th className="px-3 py-2.5">Owner</th>
-            <th className="px-3 py-2.5 pr-6 text-right">SLA</th>
-          </tr>
-        </thead>
-        <tbody className="divide-y">
-          {threads.map((thread) => (
-            <ThreadRow key={thread.threadId} thread={thread} />
-          ))}
-        </tbody>
-      </table>
+    <li className="px-6 py-4 transition-colors hover:bg-accent/30">
+      <div className="flex flex-wrap items-start gap-3">
+        <Badge
+          className={cn(
+            "shrink-0 gap-1 px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider",
+            STATUS_BADGE_CLASSES[thread.status],
+          )}
+        >
+          <StatusIcon className="h-3 w-3" />
+          {thread.status}
+        </Badge>
+        <p
+          className="min-w-0 flex-1 truncate text-sm font-medium"
+          title={thread.subject}
+        >
+          {thread.subject}
+        </p>
+      </div>
+
+      <div className="mt-3 flex flex-col gap-2 pl-1 sm:flex-row sm:items-end sm:justify-between sm:gap-4">
+        <ThreadOriginBlock thread={thread} />
+        <ThreadAssignmentBlock thread={thread} />
+      </div>
+    </li>
+  );
+}
+
+function ThreadOriginBlock({ thread }: { thread: OrgDashboardThread }) {
+  return (
+    <div className="min-w-0 space-y-0.5">
+      <p
+        className={cn(
+          "truncate text-xs",
+          thread.from ? "text-foreground" : "italic text-muted-foreground/70",
+        )}
+        title={thread.from ?? undefined}
+      >
+        {thread.from ?? FROM_PLACEHOLDER}
+      </p>
+      <p
+        className="truncate text-xs text-muted-foreground"
+        title={
+          thread.folderPath
+            ? `${thread.emailAddress} · ${thread.folderPath}`
+            : thread.emailAddress
+        }
+      >
+        {thread.emailAddress}
+        {thread.folderPath && ` · ${thread.folderPath}`}
+      </p>
     </div>
   );
 }
 
-function ThreadRow({ thread }: { thread: OrgDashboardThread }) {
+function ThreadAssignmentBlock({ thread }: { thread: OrgDashboardThread }) {
   return (
-    <tr className="hover:bg-accent/30">
-      <td className="px-6 py-3 align-top">
-        <Badge className={cn("text-xs font-medium", STATUS_BADGE_CLASSES[thread.status])}>
-          {thread.status}
-        </Badge>
-      </td>
-      <td className="px-3 py-3 align-top">
-        <p className="font-medium" title={thread.subject}>
-          {thread.subject}
-        </p>
-        <ThreadLocation
-          emailAddress={thread.emailAddress}
-          folderPath={thread.folderPath}
-        />
-      </td>
-      <td className="px-3 py-3 align-top text-muted-foreground">
-        {thread.from ?? (
-          <span className="italic text-muted-foreground/70">
-            {FROM_PLACEHOLDER}
-          </span>
-        )}
-      </td>
-      <td className="px-3 py-3 align-top text-muted-foreground">
-        <span className="inline-flex items-center gap-1">
-          <User className="h-3.5 w-3.5" />
-          {thread.owner ?? OWNER_PLACEHOLDER}
-        </span>
-      </td>
-      <td
+    <div className="flex shrink-0 flex-col gap-0.5 sm:items-end">
+      <p
         className={cn(
-          "px-3 py-3 pr-6 text-right align-top text-xs font-medium",
+          "text-xs",
+          thread.owner
+            ? "font-medium text-foreground"
+            : "italic text-muted-foreground/70",
+        )}
+      >
+        {abbreviateOwner(thread.owner)}
+      </p>
+      <p
+        className={cn(
+          "text-xs font-semibold",
           STATUS_COUNTDOWN_CLASSES[thread.status],
         )}
       >
-        {thread.slaCountdownFormatted}
-      </td>
-    </tr>
-  );
-}
-
-function ThreadLocation({
-  emailAddress,
-  folderPath,
-}: {
-  emailAddress: string;
-  folderPath: string | null;
-}) {
-  return (
-    <p className="mt-0.5 flex items-center gap-1.5 text-xs text-muted-foreground">
-      <Mail className="h-3 w-3 shrink-0" />
-      <span className="truncate">{emailAddress}</span>
-      {folderPath && (
-        <>
-          <Folder className="h-3 w-3 shrink-0" />
-          <span className="truncate">{folderPath}</span>
-        </>
-      )}
-    </p>
+        {rephraseSlaCountdown(thread.slaCountdownFormatted)}
+      </p>
+    </div>
   );
 }

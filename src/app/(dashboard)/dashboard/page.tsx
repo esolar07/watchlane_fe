@@ -83,8 +83,6 @@ export default function DashboardPage() {
   return (
     <div className="space-y-6">
       <DashboardHeader
-        datePreset={datePreset}
-        onDatePresetChange={setDatePreset}
         onRefresh={refetchAll}
         isRefreshing={isRefreshing}
       />
@@ -97,7 +95,11 @@ export default function DashboardPage() {
       ) : aggregate.data ? (
         <>
           <SnapshotSection data={aggregate.data} />
-          <PeriodSection data={aggregate.data} />
+          <PeriodSection
+            data={aggregate.data}
+            datePreset={datePreset}
+            onDatePresetChange={setDatePreset}
+          />
           {organizations.length > 1 && (
             <OrgList organizations={organizations} entries={perOrg.entries} />
           )}
@@ -108,15 +110,11 @@ export default function DashboardPage() {
 }
 
 interface DashboardHeaderProps {
-  datePreset: DatePreset;
-  onDatePresetChange: (next: DatePreset) => void;
   onRefresh: () => void;
   isRefreshing: boolean;
 }
 
 function DashboardHeader({
-  datePreset,
-  onDatePresetChange,
   onRefresh,
   isRefreshing,
 }: DashboardHeaderProps) {
@@ -129,7 +127,6 @@ function DashboardHeader({
         </p>
       </div>
       <div className="flex items-center gap-2">
-        <DateFilter value={datePreset} onChange={onDatePresetChange} />
         <Button
           variant="outline"
           size="sm"
@@ -211,16 +208,21 @@ function ErrorBanner({ message }: { message: string }) {
 function SectionHeading({
   title,
   hint,
+  rightSlot,
 }: {
   title: string;
   hint: string;
+  rightSlot?: React.ReactNode;
 }) {
   return (
-    <div className="flex items-baseline gap-3">
-      <h2 className="text-sm font-medium uppercase tracking-wide text-muted-foreground">
-        {title}
-      </h2>
-      <span className="text-xs text-muted-foreground/70">{hint}</span>
+    <div className="flex flex-wrap items-center justify-between gap-3">
+      <div className="flex items-baseline gap-3">
+        <h2 className="text-sm font-medium uppercase tracking-wide text-muted-foreground">
+          {title}
+        </h2>
+        <span className="text-xs text-muted-foreground/70">{hint}</span>
+      </div>
+      {rightSlot}
     </div>
   );
 }
@@ -244,6 +246,12 @@ function SnapshotSection({ data }: { data: AggregateDashboard }) {
           value={data.totalOverdue}
           icon={ShieldAlert}
           valueClassName={data.totalOverdue > 0 ? "text-red-600" : undefined}
+          footer={
+            <ImpactedOrgsLine
+              impactedCount={data.impactedOrgs.length}
+              totalOrgs={data.totalOrgs}
+            />
+          }
         />
         <KpiTile
           label="At Risk"
@@ -270,12 +278,23 @@ function SnapshotSection({ data }: { data: AggregateDashboard }) {
   );
 }
 
-function PeriodSection({ data }: { data: AggregateDashboard }) {
+function PeriodSection({
+  data,
+  datePreset,
+  onDatePresetChange,
+}: {
+  data: AggregateDashboard;
+  datePreset: DatePreset;
+  onDatePresetChange: (next: DatePreset) => void;
+}) {
   return (
-    <section aria-label="Selected period" className="space-y-4">
+    <section aria-label="Performance" className="space-y-4">
       <SectionHeading
-        title="In selected period"
+        title="Performance"
         hint="Historical · changes with date filter"
+        rightSlot={
+          <DateFilter value={datePreset} onChange={onDatePresetChange} />
+        }
       />
       <div className="grid gap-4 md:grid-cols-2">
         <ComplianceTile compliancePercent={data.slaCompliancePercent} />
@@ -298,6 +317,7 @@ interface KpiTileProps {
   value: string | number;
   icon: typeof Inbox;
   valueClassName?: string;
+  footer?: React.ReactNode;
 }
 
 function KpiTile({
@@ -307,6 +327,7 @@ function KpiTile({
   value,
   icon: Icon,
   valueClassName,
+  footer,
 }: KpiTileProps) {
   return (
     <Card className="transition-shadow hover:shadow-md">
@@ -321,9 +342,27 @@ function KpiTile({
         <Icon className="h-4 w-4 text-muted-foreground" />
       </CardHeader>
       <CardContent className="pt-0">
-        <p className={cn("text-2xl font-bold", valueClassName)}>{value}</p>
+        <div className="flex flex-wrap items-baseline gap-x-2">
+          <p className={cn("text-2xl font-bold", valueClassName)}>{value}</p>
+          {footer}
+        </div>
       </CardContent>
     </Card>
+  );
+}
+
+function ImpactedOrgsLine({
+  impactedCount,
+  totalOrgs,
+}: {
+  impactedCount: number;
+  totalOrgs: number;
+}) {
+  return (
+    <p className="text-xs text-muted-foreground">
+      {impactedCount} of {totalOrgs}{" "}
+      {totalOrgs === 1 ? "org" : "orgs"} impacted
+    </p>
   );
 }
 
@@ -371,7 +410,7 @@ function OrgList({
   const entryByOrgId = new Map(entries.map((e) => [e.orgId, e]));
   return (
     <section aria-label="Per-organization snapshot" className="space-y-3">
-      <SectionHeading title="By organization" hint="Live snapshot per org" />
+      <SectionHeading title="Organizations" hint="Live snapshot per org" />
       <div className="space-y-3">
         {organizations.map((org) => (
           <OrgRow
@@ -385,6 +424,21 @@ function OrgList({
   );
 }
 
+type OrgSeverity = "red" | "amber" | "neutral";
+
+function severityFor(entry?: OperationalEntry): OrgSeverity {
+  if (!entry?.data) return "neutral";
+  if (entry.data.overdueCount > 0) return "red";
+  if (entry.data.atRiskCount > 0) return "amber";
+  return "neutral";
+}
+
+const SEVERITY_BORDER: Record<OrgSeverity, string> = {
+  red: "border-l-4 border-l-red-500",
+  amber: "border-l-4 border-l-amber-500",
+  neutral: "border-l-4 border-l-transparent",
+};
+
 function OrgRow({
   organization,
   entry,
@@ -392,11 +446,16 @@ function OrgRow({
   organization: Organization;
   entry?: OperationalEntry;
 }) {
+  const severity = severityFor(entry);
   return (
-    <Card className="relative pb-10">
+    <Card className={cn("relative pb-10", SEVERITY_BORDER[severity])}>
       <CardContent className="py-4">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <OrgIdentity organization={organization} entry={entry} />
+          <OrgIdentity
+            organization={organization}
+            entry={entry}
+            severity={severity}
+          />
           {entry?.data ? (
             <OrgRowMetrics data={entry.data} />
           ) : entry?.error ? (
@@ -420,9 +479,11 @@ function OrgRow({
 function OrgIdentity({
   organization,
   entry,
+  severity,
 }: {
   organization: Organization;
   entry?: OperationalEntry;
+  severity: OrgSeverity;
 }) {
   const slaTarget = entry?.data?.slaTarget;
   return (
@@ -431,7 +492,21 @@ function OrgIdentity({
         <Building2 className="h-4 w-4 text-muted-foreground" />
       </div>
       <div>
-        <p className="font-medium leading-none">{organization.name}</p>
+        <div className="flex items-center gap-2">
+          <p className="font-medium leading-none">{organization.name}</p>
+          {severity === "red" && (
+            <ShieldAlert
+              className="h-4 w-4 text-red-500"
+              aria-label="Has overdue threads"
+            />
+          )}
+          {severity === "amber" && (
+            <AlertTriangle
+              className="h-4 w-4 text-amber-500"
+              aria-label="Has at-risk threads"
+            />
+          )}
+        </div>
         {slaTarget !== undefined && (
           <p className="mt-1 text-xs text-muted-foreground">
             SLA: {formatMinutes(slaTarget)}
@@ -447,6 +522,8 @@ function OrgRowMetrics({
 }: {
   data: NonNullable<OperationalEntry["data"]>;
 }) {
+  const overdueClasses =
+    data.overdueCount > 0 ? "text-red-600 text-base font-bold" : undefined;
   return (
     <div className="flex flex-wrap items-center gap-3 sm:gap-5">
       <Metric
@@ -468,7 +545,7 @@ function OrgRowMetrics({
           />
         }
         value={data.overdueCount}
-        className={data.overdueCount > 0 ? "text-red-600" : undefined}
+        className={overdueClasses}
       />
       <Metric
         label={
@@ -480,20 +557,6 @@ function OrgRowMetrics({
         }
         value={data.atRiskCount}
         className={data.atRiskCount > 0 ? "text-amber-600" : undefined}
-      />
-      <Metric
-        label={
-          <HelpTooltip
-            label="Oldest Gap"
-            description="Longest-waiting open thread."
-            helpLink="/help#oldest-gap"
-          />
-        }
-        value={
-          data.oldestUncoveredMinutes > 0
-            ? formatMinutes(data.oldestUncoveredMinutes)
-            : "—"
-        }
       />
     </div>
   );

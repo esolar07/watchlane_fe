@@ -164,6 +164,12 @@ export interface OrgDashboard {
 
 // ── Cross-org aggregate dashboard ──
 
+export interface AggregateImpactedOrg {
+  organizationId: string;
+  organizationName: string;
+  overdueCount: number;
+}
+
 export interface AggregateDashboard {
   windowStart: string;
   windowEnd: string;
@@ -176,6 +182,8 @@ export interface AggregateDashboard {
   oldestGapMinutes: number;
   oldestGapFormatted: string;
   slaCompliancePercent: number;
+  totalOrgs: number;
+  impactedOrgs: AggregateImpactedOrg[];
 }
 
 export interface PerformanceDashboard {

@@ -28,7 +28,7 @@ export function SnapshotBreakdown({
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-base">Open Threads</CardTitle>
+        <CardTitle className="text-base">Open Thread Status</CardTitle>
       </CardHeader>
       <CardContent>
         {openCount === 0 ? (

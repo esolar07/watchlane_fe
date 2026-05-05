@@ -56,49 +56,74 @@ function activityAccent(type: ActivityItem["type"]) {
   }
 }
 
-function activityDetail(item: ActivityItem) {
+function activityHeadline(item: ActivityItem) {
   switch (item.type) {
     case "overdue":
-      return (
-        <span className="text-red-600 font-medium">
-          {formatMinutes(item.minutesOverdue)} overdue · awaiting reply
-        </span>
-      );
     case "breach":
       return (
-        <span className="text-red-600 font-medium">
-          {formatMinutes(item.minutesOverdue)} overdue
-        </span>
+        <>
+          <span className="font-medium">{item.subject}</span>
+          <span className="text-muted-foreground"> — </span>
+          <span className="font-medium text-red-600">
+            {formatMinutes(item.minutesOverdue)} overdue
+          </span>
+        </>
       );
     case "at_risk":
       return (
-        <span className="text-amber-600 font-medium">
-          {formatMinutes(item.minutesRemaining)} remaining
-        </span>
-      );
-    case "late_response":
-      return (
-        <span className="text-amber-600 font-medium">
-          replied {formatMinutes(item.minutesOverdue)} past SLA
-          {item.responseMinutes
-            ? ` · took ${formatMinutes(item.responseMinutes)}`
-            : ""}
-        </span>
+        <>
+          <span className="font-medium">{item.subject}</span>
+          <span className="text-muted-foreground"> — </span>
+          <span className="font-medium text-amber-600">
+            {formatMinutes(item.minutesRemaining)} remaining
+          </span>
+        </>
       );
     case "covered":
       return (
-        <span className="text-emerald-600">
-          {typeof item.responseMinutes === "number"
-            ? `Replied · ${formatMinutes(item.responseMinutes)}`
-            : "Replied"}
-        </span>
+        <>
+          <span className="text-emerald-600">Replied to </span>
+          <span className="font-medium">{item.subject}</span>
+          {typeof item.responseMinutes === "number" && (
+            <>
+              <span className="text-muted-foreground"> — </span>
+              <span className="text-emerald-600">
+                {formatMinutes(item.responseMinutes)}
+              </span>
+            </>
+          )}
+        </>
+      );
+    case "late_response":
+      return (
+        <>
+          <span className="font-medium">{item.subject}</span>
+          <span className="text-muted-foreground"> — </span>
+          <span className="text-amber-600">
+            replied {formatMinutes(item.minutesOverdue)} late
+          </span>
+        </>
       );
     case "dismissed":
-      return <span className="text-muted-foreground">Deleted</span>;
+      return (
+        <>
+          <span className="font-medium">{item.subject}</span>
+          <span className="text-muted-foreground"> — deleted</span>
+        </>
+      );
     case "sync_success":
+      return (
+        <>
+          <span className="font-medium">{item.emailAddress}</span>
+          <span className="text-muted-foreground"> synced</span>
+        </>
+      );
     case "sync_failed":
       return (
-        <span className="text-muted-foreground">{item.emailAddress}</span>
+        <>
+          <span className="font-medium">{item.emailAddress}</span>
+          <span className="text-red-600"> failed</span>
+        </>
       );
   }
 }
@@ -160,40 +185,17 @@ export function ActivityFeed({ items }: { items: ActivityItem[] }) {
             <div
               key={`${item.type}-${item.timestamp}-${idx}`}
               className={cn(
-                "flex items-start gap-3 rounded-lg border-l-[3px] bg-muted/30 px-3 py-2.5",
+                "flex items-center gap-3 rounded-lg border-l-[3px] bg-muted/30 px-3 py-2",
                 activityAccent(item.type)
               )}
             >
-              <div className="mt-0.5 shrink-0">{activityIcon(item.type)}</div>
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-sm leading-snug">
-                  {"subject" in item ? (
-                    <>
-                      <span className="font-medium">{item.subject}</span>
-                      <span className="text-muted-foreground">
-                        {" "}
-                        &middot; {item.ownerName}
-                      </span>
-                    </>
-                  ) : (
-                    <span>{item.message}</span>
-                  )}
-                </p>
-                {"subject" in item && item.folderPath && (
-                  <p
-                    className="truncate text-xs text-muted-foreground/80"
-                    title={item.folderPath}
-                  >
-                    {item.folderPath}
-                  </p>
-                )}
-                <div className="mt-1 flex items-center gap-2 text-xs">
-                  {activityDetail(item)}
-                  <span className="text-muted-foreground">
-                    &middot; {formatTimestamp(item.timestamp)}
-                  </span>
-                </div>
-              </div>
+              <div className="shrink-0">{activityIcon(item.type)}</div>
+              <p className="min-w-0 flex-1 truncate text-sm leading-snug">
+                {activityHeadline(item)}
+              </p>
+              <span className="shrink-0 text-xs text-muted-foreground">
+                {formatTimestamp(item.timestamp)}
+              </span>
             </div>
           ))}
         </div>

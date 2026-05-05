@@ -8,7 +8,6 @@ import {
   BarChart3,
   Building2,
   CheckCircle2,
-  Clock,
   HelpCircle,
   Hourglass,
   Inbox,
@@ -16,12 +15,11 @@ import {
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { cn, formatMinutes } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 import { usePerformanceDashboard } from "@/hooks/usePerformanceDashboard";
 import { LateResponseTable } from "@/components/late-response-table";
 import { OrgTabNav } from "@/components/org-tab-nav";
@@ -149,8 +147,8 @@ function PerformanceContent({
   return (
     <>
       <PerformanceKpis data={data} />
-      <TrendChartPlaceholder />
       <LateResponseTable threads={data.lateResponseThreads} />
+      <TrendChartPlaceholder />
     </>
   );
 }
@@ -192,30 +190,43 @@ function EmptyState() {
   );
 }
 
+function latePercent(late: number, totalInbound: number): number {
+  if (totalInbound === 0) return 0;
+  return Math.round((late / totalInbound) * 100);
+}
+
 function PerformanceKpis({ data }: { data: PerformanceDashboard }) {
   return (
     <section
       aria-label="Performance KPIs"
       className="grid gap-4 md:grid-cols-2 lg:grid-cols-4"
     >
-      <ComplianceTile compliancePercent={data.compliancePercent} />
+      <ComplianceTile
+        compliancePercent={data.compliancePercent}
+        totalInbound={data.totalInbound}
+      />
       <PerformanceTile
-        label="Total Inbound"
+        label="Inbound Threads"
         helpText="Threads that received their first inbound message in this window."
         helpLink="/help#coverage"
         value={data.totalInbound}
         icon={Inbox}
       />
       <PerformanceTile
-        label="Late Responses"
+        label="Late Replies"
         helpText="Threads where the first reply was sent past the SLA window."
         helpLink="/help#breach"
         value={data.lateResponses}
         icon={Hourglass}
         valueClassName={data.lateResponses > 0 ? "text-amber-600" : undefined}
+        microcopy={
+          data.totalInbound > 0
+            ? `(${latePercent(data.lateResponses, data.totalInbound)}%)`
+            : undefined
+        }
       />
       <PerformanceTile
-        label="Unreplied"
+        label="Missed"
         helpText="Threads that still have no first reply."
         helpLink="/help#coverage"
         value={data.unreplied}
@@ -226,7 +237,13 @@ function PerformanceKpis({ data }: { data: PerformanceDashboard }) {
   );
 }
 
-function ComplianceTile({ compliancePercent }: { compliancePercent: number }) {
+function ComplianceTile({
+  compliancePercent,
+  totalInbound,
+}: {
+  compliancePercent: number;
+  totalInbound: number;
+}) {
   return (
     <Card
       className={cn(
@@ -237,7 +254,7 @@ function ComplianceTile({ compliancePercent }: { compliancePercent: number }) {
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <CardTitle className="text-sm font-medium text-muted-foreground">
           <HelpTooltip
-            label="Compliance"
+            label="SLA Compliance"
             description="Replies within SLA divided by replies (covered + late)."
             helpLink="/help#coverage"
           />
@@ -255,6 +272,9 @@ function ComplianceTile({ compliancePercent }: { compliancePercent: number }) {
         >
           {compliancePercent.toFixed(1)}%
         </p>
+        <p className="mt-1 text-xs text-muted-foreground">
+          of {totalInbound} {totalInbound === 1 ? "thread" : "threads"}
+        </p>
       </CardContent>
     </Card>
   );
@@ -267,6 +287,7 @@ interface PerformanceTileProps {
   value: string | number;
   icon: typeof Inbox;
   valueClassName?: string;
+  microcopy?: string;
 }
 
 function PerformanceTile({
@@ -276,6 +297,7 @@ function PerformanceTile({
   value,
   icon: Icon,
   valueClassName,
+  microcopy,
 }: PerformanceTileProps) {
   return (
     <Card className="transition-shadow hover:shadow-md">
@@ -291,6 +313,9 @@ function PerformanceTile({
       </CardHeader>
       <CardContent className="pt-0">
         <p className={cn("text-2xl font-bold", valueClassName)}>{value}</p>
+        {microcopy && (
+          <p className="mt-1 text-xs text-muted-foreground">{microcopy}</p>
+        )}
       </CardContent>
     </Card>
   );
@@ -298,21 +323,17 @@ function PerformanceTile({
 
 function TrendChartPlaceholder() {
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2 text-base">
+    <Card className="border-border/60 bg-muted/30 shadow-none">
+      <CardHeader className="pb-2">
+        <CardTitle className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
           <BarChart3 className="h-4 w-4" />
-          Compliance trend
+          Compliance Trend
         </CardTitle>
-        <CardDescription>
-          Day-over-day compliance — coming soon.
-        </CardDescription>
       </CardHeader>
-      <CardContent className="flex h-40 items-center justify-center text-sm text-muted-foreground">
-        <span className="flex items-center gap-2">
-          <Clock className="h-4 w-4" />
-          Backend trend endpoint not wired yet.
-        </span>
+      <CardContent className="pt-0">
+        <p className="text-xs text-muted-foreground">
+          Trend data will appear once available.
+        </p>
       </CardContent>
     </Card>
   );

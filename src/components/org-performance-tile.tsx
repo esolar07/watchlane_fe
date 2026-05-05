@@ -1,98 +1,118 @@
 "use client";
 
-import { CheckCircle2, Clock } from "lucide-react";
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { HelpTooltip } from "@/components/ui/help-tooltip";
 import {
-  complianceBg,
-  complianceColor,
-} from "@/components/coverage-metrics";
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { HelpTooltip } from "@/components/ui/help-tooltip";
+import { complianceColor } from "@/components/coverage-metrics";
 import { cn } from "@/lib/utils";
+import {
+  datePresetOptions,
+  type DatePreset,
+} from "@/lib/date-presets";
 import type { OrgDashboardPerformance } from "@/types/dashboard";
+
+interface OrgPerformanceTileProps {
+  performance: OrgDashboardPerformance;
+  datePreset: DatePreset;
+  onDatePresetChange: (next: DatePreset) => void;
+}
 
 export function OrgPerformanceTile({
   performance,
-}: {
-  performance: OrgDashboardPerformance;
-}) {
+  datePreset,
+  onDatePresetChange,
+}: OrgPerformanceTileProps) {
+  const compliance = performance.slaCompliancePercent;
+  const avgResponse = performance.avgResponseFormatted || "—";
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-base">Performance</CardTitle>
-        <CardDescription>Historical · in selected period.</CardDescription>
+    <Card className="border-border/60 bg-muted/30 shadow-none">
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+        <CardTitle className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+          Performance
+        </CardTitle>
+        <PeriodSelect value={datePreset} onChange={onDatePresetChange} />
       </CardHeader>
-      <CardContent className="space-y-4">
-        <ComplianceRow
-          slaCompliancePercent={performance.slaCompliancePercent}
+      <CardContent className="space-y-2 pt-0">
+        <PerfRow
+          label="Compliance"
+          helpText="Replies within SLA divided by replies in the selected period."
+          helpLink="/help#coverage"
+          value={`${compliance.toFixed(1)}%`}
+          valueClassName={complianceColor(compliance)}
         />
-        <AvgResponseRow
-          avgResponseFormatted={performance.avgResponseFormatted}
+        <PerfRow
+          label="Avg response"
+          helpText="Average time to send the first reply over replied threads."
+          helpLink="/help#response-time"
+          value={avgResponse}
         />
       </CardContent>
     </Card>
   );
 }
 
-function ComplianceRow({
-  slaCompliancePercent,
+function PeriodSelect({
+  value,
+  onChange,
 }: {
-  slaCompliancePercent: number;
+  value: DatePreset;
+  onChange: (next: DatePreset) => void;
 }) {
   return (
-    <div
-      className={cn(
-        "flex items-center justify-between rounded-md border p-3",
-        complianceBg(slaCompliancePercent),
-      )}
-    >
-      <div className="flex items-center gap-2">
-        <CheckCircle2
-          className={cn("h-4 w-4", complianceColor(slaCompliancePercent))}
-        />
-        <span className="text-sm font-medium">
-          <HelpTooltip
-            label="Compliance"
-            description="Replies within SLA divided by replies in the selected period."
-            helpLink="/help#coverage"
-          />
-        </span>
-      </div>
-      <p
-        className={cn(
-          "text-xl font-bold",
-          complianceColor(slaCompliancePercent),
-        )}
+    <Select value={value} onValueChange={(v) => onChange(v as DatePreset)}>
+      <SelectTrigger
+        size="sm"
+        className="h-7 w-auto gap-1 border-transparent bg-transparent px-2 text-xs font-medium text-muted-foreground hover:bg-accent/50"
       >
-        {slaCompliancePercent.toFixed(1)}%
-      </p>
-    </div>
+        <SelectValue />
+      </SelectTrigger>
+      <SelectContent align="end">
+        {datePresetOptions.map((opt) => (
+          <SelectItem key={opt.value} value={opt.value} className="text-xs">
+            {opt.label}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
   );
 }
 
-function AvgResponseRow({
-  avgResponseFormatted,
-}: {
-  avgResponseFormatted: string;
-}) {
+interface PerfRowProps {
+  label: string;
+  helpText: string;
+  helpLink: string;
+  value: string;
+  valueClassName?: string;
+}
+
+function PerfRow({
+  label,
+  helpText,
+  helpLink,
+  value,
+  valueClassName,
+}: PerfRowProps) {
   return (
-    <div className="flex items-center justify-between rounded-md border p-3">
-      <div className="flex items-center gap-2">
-        <Clock className="h-4 w-4 text-muted-foreground" />
-        <span className="text-sm font-medium">
-          <HelpTooltip
-            label="Avg Response Time"
-            description="Average time to send the first reply over replied threads."
-            helpLink="/help#response-time"
-          />
-        </span>
-      </div>
-      <p className="text-xl font-bold">{avgResponseFormatted || "—"}</p>
+    <div className="flex items-baseline justify-between text-sm">
+      <span className="text-muted-foreground">
+        <HelpTooltip
+          label={label}
+          description={helpText}
+          helpLink={helpLink}
+        />
+      </span>
+      <span className={cn("font-semibold", valueClassName)}>{value}</span>
     </div>
   );
 }
