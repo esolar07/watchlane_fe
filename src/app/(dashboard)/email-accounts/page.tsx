@@ -142,7 +142,11 @@ export default function EmailAccountsPage() {
             ) : (
               <ul className="divide-y">
                 {group.accounts.map((account) => (
-                  <AccountRow key={account.id} account={account} />
+                  <AccountRow
+                    key={account.id}
+                    account={account}
+                    orgId={group.orgId}
+                  />
                 ))}
               </ul>
             )}
@@ -153,13 +157,19 @@ export default function EmailAccountsPage() {
   );
 }
 
-function AccountRow({ account }: { account: EmailAccount }) {
+function AccountRow({
+  account,
+  orgId,
+}: {
+  account: EmailAccount;
+  orgId: string;
+}) {
   const isMicrosoft = account.provider === "microsoft";
 
   return (
     <li>
       <Link
-        href={`/email-accounts/${account.id}/folders`}
+        href={`/email-accounts/${account.id}/folders?orgId=${encodeURIComponent(orgId)}`}
         className="group flex items-center gap-3 py-3 transition-colors hover:bg-accent/40"
       >
         <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-muted">

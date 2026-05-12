@@ -29,6 +29,16 @@ import {
   getAuthMailboxUrl,
 } from "@/services/api";
 import { useAuth } from "@/components/AuthProvider";
+import { useEntitlements } from "@/hooks/useEntitlements";
+import { LimitBadge } from "@/components/LimitBadge";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { isUpgradeError } from "@/lib/errors";
+import { triggerUpgradePrompt } from "@/lib/upgradeBus";
 import type { OrganizationDetail } from "@/types/organization";
 
 const roleIcons: Record<string, typeof Crown> = {
@@ -48,9 +58,13 @@ function formatDate(dateString: string) {
 export default function OrganizationsPage() {
   const router = useRouter();
   const { organizations: authOrgs } = useAuth();
-  const canCreateOrg = authOrgs.some(
-    (o) => o.role === "OWNER" || o.role === "ADMIN"
+  const { isWithinLimit, refetch: refetchEntitlements } = useEntitlements();
+  const roleAllowsCreate = authOrgs.some(
+    (membership) => membership.role === "OWNER" || membership.role === "ADMIN"
   ) || authOrgs.length === 0;
+  const orgLimitAvailable = isWithinLimit("org_limit");
+  const mailboxLimitAvailable = isWithinLimit("mailbox_limit");
+  const canCreateOrg = roleAllowsCreate && orgLimitAvailable;
   const [orgs, setOrgs] = useState<OrganizationDetail[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -94,7 +108,6 @@ export default function OrganizationsPage() {
         ...prev,
         {
           ...newOrg,
-          planTier: "FREE",
           createdAt: new Date().toISOString(),
         },
       ]);
@@ -102,9 +115,21 @@ export default function OrganizationsPage() {
       setSlaEnabled(true);
       setSlaMinutes(120);
       setDialogOpen(false);
-    } catch (err) {
+      refetchEntitlements();
+    } catch (caught) {
+      if (isUpgradeError(caught)) {
+        setDialogOpen(false);
+        triggerUpgradePrompt({
+          feature: caught.body.feature,
+          planSlug: caught.body.planSlug,
+          message: caught.message,
+          limit: caught.body.limit,
+          currentCount: caught.body.currentCount,
+        });
+        return;
+      }
       setError(
-        err instanceof Error ? err.message : "Something went wrong. Please try again."
+        caught instanceof Error ? caught.message : "Something went wrong. Please try again."
       );
     } finally {
       setIsSubmitting(false);
@@ -116,8 +141,17 @@ export default function OrganizationsPage() {
     try {
       const { url } = await getAuthMailboxUrl("microsoft", orgId);
       window.location.href = url;
-    } catch {
+    } catch (caught) {
       setConnectingOrgId(null);
+      if (isUpgradeError(caught)) {
+        triggerUpgradePrompt({
+          feature: caught.body.feature,
+          planSlug: caught.body.planSlug,
+          message: caught.message,
+          limit: caught.body.limit,
+          currentCount: caught.body.currentCount,
+        });
+      }
     }
   }
 
@@ -232,13 +266,34 @@ export default function OrganizationsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Organizations</h1>
-          <p className="text-sm text-muted-foreground">
-            Manage your organizations and team access.
-          </p>
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight">Organizations</h1>
+            <p className="text-sm text-muted-foreground">
+              Manage your organizations and team access.
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <LimitBadge feature="org_limit" label="Orgs" />
+            <LimitBadge feature="mailbox_limit" label="Mailboxes" />
+          </div>
         </div>
+        {roleAllowsCreate && !orgLimitAvailable && (
+          <TooltipProvider delayDuration={200}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span>
+                  <Button disabled>
+                    <Plus className="mr-2 h-4 w-4" />
+                    New organization
+                  </Button>
+                </span>
+              </TooltipTrigger>
+              <TooltipContent>Upgrade your plan to add more organizations.</TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        )}
         {canCreateOrg && <Dialog open={dialogOpen} onOpenChange={resetAndClose}>
           <DialogTrigger asChild>
             <Button>
@@ -352,7 +407,7 @@ export default function OrganizationsPage() {
                     {org.role}
                   </span>
                   <span className="rounded-full bg-muted px-2.5 py-0.5 text-xs font-medium text-muted-foreground">
-                    {org.planTier}
+                    {org.plan.name}
                   </span>
                 </div>
                 {org.mailboxConnected ? (
@@ -362,14 +417,28 @@ export default function OrganizationsPage() {
                       Mailbox connected
                     </span>
                   </div>
+                ) : !mailboxLimitAvailable ? (
+                  <TooltipProvider delayDuration={200}>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span onClick={(eventCapture) => eventCapture.stopPropagation()}>
+                          <Button variant="outline" size="sm" className="w-full" disabled>
+                            <Mail className="mr-2 h-4 w-4" />
+                            Connect mailbox
+                          </Button>
+                        </span>
+                      </TooltipTrigger>
+                      <TooltipContent>Upgrade your plan to connect more mailboxes.</TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                 ) : (
                   <Button
                     variant="outline"
                     size="sm"
                     className="w-full"
                     disabled={connectingOrgId === org.id}
-                    onClick={(e) => {
-                      e.stopPropagation();
+                    onClick={(clickEvent) => {
+                      clickEvent.stopPropagation();
                       handleConnectMailbox(org.id);
                     }}
                   >

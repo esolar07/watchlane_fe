@@ -2,11 +2,25 @@ import { getMe } from "@/services/api";
 import { type AuthState } from "@/types/auth";
 export type { AuthState };
 
+const SIGNED_OUT: AuthState = {
+  user: null,
+  organizations: [],
+  isAuthenticated: false,
+  isLoading: false,
+  isSuperAdmin: false,
+};
+
 export async function fetchCurrentUser(): Promise<AuthState> {
   try {
-    const { user, organizations } = await getMe();
-    return { user, organizations, isAuthenticated: true, isLoading: false };
+    const me = await getMe();
+    return {
+      user: me.user,
+      organizations: me.organizations,
+      isAuthenticated: true,
+      isLoading: false,
+      isSuperAdmin: Boolean(me.user.isSuperAdmin),
+    };
   } catch {
-    return { user: null, organizations: [], isAuthenticated: false, isLoading: false };
+    return SIGNED_OUT;
   }
 }

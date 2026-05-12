@@ -40,6 +40,7 @@ interface RuleEditorProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   emailAccounts: EmailAccount[];
+  orgId: string;
   onCreated: (rule: Rule) => void;
 }
 
@@ -60,6 +61,7 @@ export function RuleEditor({
   open,
   onOpenChange,
   emailAccounts,
+  orgId,
   onCreated,
 }: RuleEditorProps) {
   const [name, setName] = useState("");
@@ -105,7 +107,7 @@ export function RuleEditor({
     let cancelled = false;
     setFoldersLoading(true);
     setFoldersError(null);
-    getEmailAccountFolders(emailAccountId)
+    getEmailAccountFolders(emailAccountId, orgId)
       .then(({ folders }) => {
         if (cancelled) return;
         setFolders(folders);
@@ -123,7 +125,7 @@ export function RuleEditor({
     return () => {
       cancelled = true;
     };
-  }, [scopeKind, emailAccountId]);
+  }, [scopeKind, emailAccountId, orgId]);
 
   const folderOptions = useMemo(() => {
     if (folders.length === 0) return [];

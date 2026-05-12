@@ -1,8 +1,16 @@
 import { Organization } from "./organization";
-import { User } from "@/types/user"
+import { User } from "@/types/user";
+
+export interface MeUser {
+  id: string;
+  name: string;
+  email: string;
+  avatarUrl?: string;
+  isSuperAdmin: boolean;
+}
 
 export interface MeResponse {
-  user: { id: string; name: string; email: string; avatarUrl?: string };
+  user: MeUser;
   organizations: Organization[];
 }
 
@@ -11,4 +19,5 @@ export interface AuthState {
   organizations: Organization[];
   isAuthenticated: boolean;
   isLoading: boolean;
+  isSuperAdmin: boolean;
 }

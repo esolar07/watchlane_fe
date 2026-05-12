@@ -24,11 +24,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     organizations: [],
     isAuthenticated: false,
     isLoading: true,
+    isSuperAdmin: false,
   });
 
   useEffect(() => {
-    fetchCurrentUser().then(({ user, organizations, isAuthenticated }) => {
-      setState({ user, organizations, isAuthenticated, isLoading: false });
+    fetchCurrentUser().then((next) => {
+      setState({ ...next, isLoading: false });
     });
   }, []);
 
@@ -38,6 +39,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       organizations: [],
       isAuthenticated: false,
       isLoading: false,
+      isSuperAdmin: false,
     });
     router.push("/login");
   }, [router]);

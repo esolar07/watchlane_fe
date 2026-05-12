@@ -28,11 +28,7 @@ import {
   useAllOperationalDashboards,
   type OperationalEntry,
 } from "@/hooks/useAllOperationalDashboards";
-import {
-  Metric,
-  complianceColor,
-  complianceBg,
-} from "@/components/coverage-metrics";
+import { Metric, complianceColor } from "@/components/coverage-metrics";
 import { SnapshotBreakdown } from "@/components/snapshot-breakdown";
 import { cn, formatMinutes } from "@/lib/utils";
 import type { AggregateDashboard } from "@/types/dashboard";
@@ -368,18 +364,13 @@ function ImpactedOrgsLine({
 
 function ComplianceTile({ compliancePercent }: { compliancePercent: number }) {
   return (
-    <Card
-      className={cn(
-        "border transition-shadow hover:shadow-md",
-        complianceBg(compliancePercent),
-      )}
-    >
+    <Card className="transition-shadow hover:shadow-md">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <CardTitle className="text-sm font-medium text-muted-foreground">
           <HelpTooltip
             label="SLA Compliance"
             description="Replies within SLA divided by replies in the selected period."
-            helpLink="/help#coverage"
+            helpLink="/help#sla-compliance"
           />
         </CardTitle>
         <CheckCircle2

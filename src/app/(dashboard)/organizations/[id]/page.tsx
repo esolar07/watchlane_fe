@@ -264,7 +264,7 @@ export default function OrganizationSettingsPage() {
             <div className="grid gap-1">
               <span className="text-sm text-muted-foreground">Plan</span>
               <span className="inline-flex w-fit rounded-full bg-muted px-2.5 py-0.5 text-xs font-medium text-muted-foreground">
-                {org.planTier}
+                {org.plan.name}
               </span>
             </div>
           </CardContent>

@@ -4,6 +4,9 @@ export interface Organization {
   role: string;
   mailboxConnected: boolean;
   settings: OrganizationSettings;
+  workspaceId: string;
+  workspaceName: string;
+  plan: { slug: string; name: string };
 }
 
 export interface OrganizationMember {
@@ -13,14 +16,8 @@ export interface OrganizationMember {
   mailboxConnected: boolean;
 }
 
-export interface OrganizationDetail {
-  id: string;
-  name: string;
-  planTier: string;
-  role: string;
+export interface OrganizationDetail extends Organization {
   createdAt: string;
-  mailboxConnected: boolean;
-  settings: OrganizationSettings;
   inviteCode?: string;
   members?: OrganizationMember[];
 }

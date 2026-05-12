@@ -82,6 +82,60 @@ export const helpTopics: HelpTopic[] = [
         answer:
           "The longest-running uncovered thread — the inbound email that has been waiting the longest for a reply.",
       },
+      {
+        id: "sla-compliance",
+        question: "What is SLA Compliance?",
+        answer:
+          "SLA Compliance is the percentage of replies sent within the SLA window during the selected period — on-time replies divided by total replies. Higher is better. The percentage is color-coded green when healthy, amber as a warning, and red when poor.",
+      },
+    ],
+  },
+  {
+    id: "organizations",
+    title: "Organizations",
+    definitions: [
+      {
+        id: "organization",
+        question: "What is an organization?",
+        answer:
+          "An organization is a workspace that groups its members, connected mailboxes, and rules. A user can belong to more than one organization.",
+      },
+      {
+        id: "multi-org",
+        question: "Can I have more than one organization?",
+        answer:
+          "Yes. The dashboard shows a snapshot per organization, and pages that act on a single org (such as folder settings or rules) use the organization tied to the page you opened.",
+      },
+      {
+        id: "invite-members",
+        question: "How do I invite team members?",
+        answer:
+          "On the organization detail page, owners and admins can copy the team invite link and share it. Anyone with the link can join. The invite link can be regenerated to revoke the old one.",
+      },
+    ],
+  },
+  {
+    id: "rules",
+    title: "Rules",
+    definitions: [
+      {
+        id: "rule",
+        question: "What is a rule?",
+        answer:
+          "A rule defines what Watchlane evaluates on tracked threads and where it applies. Rules are managed from the organization's Rules page.",
+      },
+      {
+        id: "rule-scope",
+        question: "What is a rule's scope?",
+        answer:
+          "Scope controls where a rule applies. Organization scope covers every connected mailbox; Account scope targets one mailbox; Folder scope targets a single monitored folder.",
+      },
+      {
+        id: "rule-evaluation",
+        question: "What can a rule evaluate?",
+        answer:
+          "Available evaluations are SLA breach, negative tone, no reply, and manual review. The SLA breach rule uses a threshold you set when creating the rule.",
+      },
     ],
   },
   {

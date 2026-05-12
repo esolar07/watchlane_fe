@@ -155,6 +155,7 @@ export default function OrgRulesPage() {
         open={editorOpen}
         onOpenChange={setEditorOpen}
         emailAccounts={accounts}
+        orgId={orgId}
         onCreated={handleCreated}
       />
     </div>

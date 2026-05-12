@@ -7,6 +7,7 @@ import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
   Building2,
+  Building,
   Mail,
   Settings,
   HelpCircle,
@@ -15,17 +16,21 @@ import {
   X,
   RefreshCw,
   Check,
+  Crown,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/components/AuthProvider";
+import { WorkspaceSwitcher } from "@/components/WorkspaceSwitcher";
 import { triggerSync } from "@/services/api";
 
 const navItems = [
   { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { label: "Organizations", href: "/organizations", icon: Building2 },
   { label: "Email Accounts", href: "/email-accounts", icon: Mail },
+  { label: "Workspace", href: "/workspace", icon: Building },
   { label: "Settings", href: "/settings", icon: Settings },
+  { label: "Plans (admin)", href: "/admin/plans", icon: Crown },
   { label: "Help", href: "/help", icon: HelpCircle },
 ];
 
@@ -43,11 +48,16 @@ export function Sidebar({
   onMobileClose,
 }: SidebarProps) {
   const pathname = usePathname();
-  const { organizations } = useAuth();
+  const { organizations, isSuperAdmin } = useAuth();
 
   const canSync = organizations.some(
-    (o) => o.role === "OWNER" || o.role === "ADMIN"
+    (membership) => membership.role === "OWNER" || membership.role === "ADMIN"
   );
+
+  const visibleNavItems = navItems.filter((item) => {
+    if (item.href.startsWith("/admin")) return isSuperAdmin;
+    return true;
+  });
 
   const [syncState, setSyncState] = useState<
     "idle" | "syncing" | "success" | "error"
@@ -119,8 +129,12 @@ export function Sidebar({
           </Button>
         </div>
 
-        <nav className="mt-6 flex flex-1 flex-col gap-1 px-3">
-          {navItems.map((item) => {
+        <div className="mt-4 px-3">
+          <WorkspaceSwitcher collapsed={collapsed && !mobileOpen} />
+        </div>
+
+        <nav className="mt-4 flex flex-1 flex-col gap-1 px-3">
+          {visibleNavItems.map((item) => {
             const isActive =
               pathname === item.href || pathname.startsWith(item.href + "/");
             return (
