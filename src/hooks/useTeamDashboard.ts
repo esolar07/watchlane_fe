@@ -1,46 +1,46 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { getOrgDashboard } from "@/services/api";
-import type { OrgDashboard } from "@/types/dashboard";
+import { getTeamDashboard } from "@/services/api";
+import type { TeamDashboard } from "@/types/dashboard";
 
-interface UseOrgDashboardArgs {
-  orgId: string;
+interface UseTeamDashboardArgs {
+  teamId: string;
   startDate: string;
   endDate: string;
 }
 
-interface UseOrgDashboardResult {
-  data: OrgDashboard | null;
+interface UseTeamDashboardResult {
+  data: TeamDashboard | null;
   isLoading: boolean;
   error: string | null;
   refetch: () => void;
 }
 
-export function useOrgDashboard({
-  orgId,
+export function useTeamDashboard({
+  teamId,
   startDate,
   endDate,
-}: UseOrgDashboardArgs): UseOrgDashboardResult {
-  const [data, setData] = useState<OrgDashboard | null>(null);
+}: UseTeamDashboardArgs): UseTeamDashboardResult {
+  const [data, setData] = useState<TeamDashboard | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const fetchData = useCallback(async () => {
-    if (!orgId) return;
+    if (!teamId) return;
     setIsLoading(true);
     setError(null);
     try {
-      setData(await getOrgDashboard({ orgId, startDate, endDate }));
+      setData(await getTeamDashboard({ teamId, startDate, endDate }));
     } catch (err) {
       setError(
-        err instanceof Error ? err.message : "Failed to fetch org dashboard",
+        err instanceof Error ? err.message : "Failed to fetch team dashboard",
       );
       setData(null);
     } finally {
       setIsLoading(false);
     }
-  }, [orgId, startDate, endDate]);
+  }, [teamId, startDate, endDate]);
 
   useEffect(() => {
     fetchData();

@@ -40,12 +40,12 @@ interface RuleEditorProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   emailAccounts: EmailAccount[];
-  orgId: string;
+  teamId: string;
   onCreated: (rule: Rule) => void;
 }
 
 const scopeOptions: { value: ScopeKind; label: string; icon: typeof Building2 }[] = [
-  { value: "ORGANIZATION", label: "Organization", icon: Building2 },
+  { value: "TEAM", label: "Team", icon: Building2 },
   { value: "ACCOUNT", label: "Account", icon: Mail },
   { value: "FOLDER", label: "Folder", icon: Folder },
 ];
@@ -61,12 +61,12 @@ export function RuleEditor({
   open,
   onOpenChange,
   emailAccounts,
-  orgId,
+  teamId,
   onCreated,
 }: RuleEditorProps) {
   const [name, setName] = useState("");
   const [evaluationType, setEvaluationType] = useState<EvaluationType>("SLA_BREACH");
-  const [scopeKind, setScopeKind] = useState<ScopeKind>("ORGANIZATION");
+  const [scopeKind, setScopeKind] = useState<ScopeKind>("TEAM");
   const [emailAccountId, setEmailAccountId] = useState<string>("");
   const [folderId, setFolderId] = useState<string>("");
   const [threshold, setThreshold] = useState<string>("");
@@ -82,7 +82,7 @@ export function RuleEditor({
     if (!open) {
       setName("");
       setEvaluationType("SLA_BREACH");
-      setScopeKind("ORGANIZATION");
+      setScopeKind("TEAM");
       setEmailAccountId("");
       setFolderId("");
       setThreshold("");
@@ -107,7 +107,7 @@ export function RuleEditor({
     let cancelled = false;
     setFoldersLoading(true);
     setFoldersError(null);
-    getEmailAccountFolders(emailAccountId, orgId)
+    getEmailAccountFolders(emailAccountId, teamId)
       .then(({ folders }) => {
         if (cancelled) return;
         setFolders(folders);
@@ -125,7 +125,7 @@ export function RuleEditor({
     return () => {
       cancelled = true;
     };
-  }, [scopeKind, emailAccountId, orgId]);
+  }, [scopeKind, emailAccountId, teamId]);
 
   const folderOptions = useMemo(() => {
     if (folders.length === 0) return [];
@@ -147,7 +147,7 @@ export function RuleEditor({
 
   function handleScopeChange(next: ScopeKind) {
     setScopeKind(next);
-    if (next === "ORGANIZATION") {
+    if (next === "TEAM") {
       setEmailAccountId("");
       setFolderId("");
     } else if (next === "ACCOUNT") {
@@ -162,7 +162,7 @@ export function RuleEditor({
       setSubmitError("Name is required.");
       return;
     }
-    if (scopeKind !== "ORGANIZATION" && !emailAccountId) {
+    if (scopeKind !== "TEAM" && !emailAccountId) {
       setSubmitError("Pick an account for this scope.");
       return;
     }
@@ -195,7 +195,7 @@ export function RuleEditor({
     setSubmitError(null);
     setIsSubmitting(true);
     try {
-      const { rule } = await createRule(payload);
+      const { rule } = await createRule({ ...payload, teamId });
       onCreated(rule);
       onOpenChange(false);
     } catch (err) {
@@ -374,7 +374,7 @@ export function RuleEditor({
                 <p className="text-xs text-muted-foreground">
                   None of these folders are currently monitored.{" "}
                   <Link
-                    href={`/email-accounts/${emailAccountId}/folders`}
+                    href={`/teams/${teamId}/email-accounts/${emailAccountId}/folders`}
                     className="font-medium text-primary underline-offset-2 hover:underline"
                     onClick={() => onOpenChange(false)}
                   >
@@ -410,7 +410,7 @@ export function RuleEditor({
             <Info className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
             <p className="text-xs text-muted-foreground">
               More specific scopes win. A folder rule overrides an account
-              rule of the same type, which overrides an org rule of the same
+              rule of the same type, which overrides an team rule of the same
               type. Different rule types are evaluated independently.
             </p>
           </div>

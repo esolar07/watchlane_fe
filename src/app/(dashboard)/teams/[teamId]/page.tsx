@@ -30,12 +30,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
-  getOrganization,
-  updateOrganization,
+  getTeam,
+  updateTeam,
   regenerateInviteCode,
 } from "@/services/api";
-import type { OrganizationDetail } from "@/types/organization";
-import { OrgTabNav } from "@/components/org-tab-nav";
+import type { TeamDetail } from "@/types/team";
+import { TeamTabNav } from "@/components/team-tab-nav";
 
 const roleIcons: Record<string, typeof Crown> = {
   OWNER: Crown,
@@ -52,11 +52,11 @@ function formatDate(dateString: string) {
 }
 
 export default function OrganizationSettingsPage() {
-  const params = useParams<{ id: string }>();
+  const params = useParams<{ teamId: string }>();
   const router = useRouter();
-  const orgId = params?.id ?? "";
+  const teamId = params?.teamId ?? "";
 
-  const [org, setOrg] = useState<OrganizationDetail | null>(null);
+  const [team, setTeam] = useState<TeamDetail | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
 
@@ -71,10 +71,10 @@ export default function OrganizationSettingsPage() {
   const [isRegenerating, setIsRegenerating] = useState(false);
 
   useEffect(() => {
-    if (!orgId) return;
-    getOrganization(orgId)
+    if (!teamId) return;
+    getTeam(teamId)
       .then((data) => {
-        setOrg(data);
+        setTeam(data);
         setEditName(data.name);
         setEditSlaEnabled(data.settings.slaEnabled);
         setEditSlaMinutes(data.settings.slaMinutes);
@@ -82,21 +82,21 @@ export default function OrganizationSettingsPage() {
       .catch((err) => {
         if (
           err instanceof Error &&
-          err.message === "Organization not found"
+          err.message === "Team not found"
         ) {
           setNotFound(true);
         }
       })
       .finally(() => setIsLoading(false));
-  }, [orgId]);
+  }, [teamId]);
 
-  const canEdit = org?.role === "OWNER" || org?.role === "ADMIN";
+  const canEdit = team?.role === "OWNER" || team?.role === "ADMIN";
 
   function startEditing() {
-    if (!org) return;
-    setEditName(org.name);
-    setEditSlaEnabled(org.settings.slaEnabled);
-    setEditSlaMinutes(org.settings.slaMinutes);
+    if (!team) return;
+    setEditName(team.name);
+    setEditSlaEnabled(team.settings.slaEnabled);
+    setEditSlaMinutes(team.settings.slaMinutes);
     setError("");
     setIsEditing(true);
   }
@@ -107,24 +107,24 @@ export default function OrganizationSettingsPage() {
   }
 
   async function handleSave() {
-    if (!org || !orgId) return;
+    if (!team || !teamId) return;
     const trimmed = editName.trim();
     if (!trimmed) {
-      setError("Organization name is required.");
+      setError("Team name is required.");
       return;
     }
 
     setError("");
     setIsSaving(true);
     try {
-      const updated = await updateOrganization(orgId, {
+      const updated = await updateTeam(teamId, {
         name: trimmed,
         settings: {
           slaEnabled: editSlaEnabled,
           slaMinutes: editSlaMinutes,
         },
       });
-      setOrg(updated);
+      setTeam(updated);
       setIsEditing(false);
     } catch (err) {
       setError(
@@ -137,8 +137,8 @@ export default function OrganizationSettingsPage() {
     }
   }
 
-  const inviteLink = org?.inviteCode
-    ? `${window.location.origin}/invite?code=${org.inviteCode}`
+  const inviteLink = team?.inviteCode
+    ? `${window.location.origin}/invite?code=${team.inviteCode}`
     : null;
 
   async function copyInviteLink() {
@@ -149,11 +149,11 @@ export default function OrganizationSettingsPage() {
   }
 
   async function handleRegenerateInvite() {
-    if (!orgId) return;
+    if (!teamId) return;
     setIsRegenerating(true);
     try {
-      const updated = await regenerateInviteCode(orgId);
-      setOrg(updated);
+      const updated = await regenerateInviteCode(teamId);
+      setTeam(updated);
     } catch {
       // silently fail — user can retry
     } finally {
@@ -169,13 +169,13 @@ export default function OrganizationSettingsPage() {
     );
   }
 
-  if (notFound || !org) {
+  if (notFound || !team) {
     return (
       <div className="flex flex-col items-center justify-center gap-4 py-24">
         <Building2 className="h-12 w-12 text-muted-foreground" />
-        <h2 className="text-lg font-semibold">Organization not found</h2>
+        <h2 className="text-lg font-semibold">Team not found</h2>
         <p className="text-sm text-muted-foreground">
-          The organization you&apos;re looking for doesn&apos;t exist or you
+          The team you&apos;re looking for doesn&apos;t exist or you
           don&apos;t have access.
         </p>
         <Button
@@ -189,7 +189,7 @@ export default function OrganizationSettingsPage() {
     );
   }
 
-  const RoleIcon = roleIcons[org.role] ?? User;
+  const RoleIcon = roleIcons[team.role] ?? User;
 
   return (
     <div className="space-y-6">
@@ -208,9 +208,9 @@ export default function OrganizationSettingsPage() {
               <Building2 className="h-5 w-5 text-primary" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold tracking-tight">{org.name}</h1>
+              <h1 className="text-2xl font-bold tracking-tight">{team.name}</h1>
               <p className="text-sm text-muted-foreground">
-                Created {formatDate(org.createdAt)}
+                Created {formatDate(team.createdAt)}
               </p>
             </div>
           </div>
@@ -224,22 +224,22 @@ export default function OrganizationSettingsPage() {
       </div>
 
       {/* ── Tab nav ── */}
-      <OrgTabNav orgId={orgId} />
+      <TeamTabNav teamId={teamId} />
 
       {/* ── Settings content ── */}
       <div className="grid gap-6 lg:grid-cols-2">
-        {/* Organization Details Card */}
+        {/* Team Details Card */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Organization Details</CardTitle>
+            <CardTitle className="text-base">Team Details</CardTitle>
             <CardDescription>
-              General information about your organization.
+              General information about your team.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             {isEditing ? (
               <div className="grid gap-2">
-                <Label htmlFor="edit-name">Organization name</Label>
+                <Label htmlFor="edit-name">Team name</Label>
                 <Input
                   id="edit-name"
                   value={editName}
@@ -251,20 +251,14 @@ export default function OrganizationSettingsPage() {
             ) : (
               <div className="grid gap-1">
                 <span className="text-sm text-muted-foreground">Name</span>
-                <span className="font-medium">{org.name}</span>
+                <span className="font-medium">{team.name}</span>
               </div>
             )}
             <div className="grid gap-1">
               <span className="text-sm text-muted-foreground">Role</span>
               <span className="inline-flex w-fit items-center gap-1.5 rounded-full bg-muted px-2.5 py-0.5 text-xs font-medium text-muted-foreground">
                 <RoleIcon className="h-3 w-3" />
-                {org.role}
-              </span>
-            </div>
-            <div className="grid gap-1">
-              <span className="text-sm text-muted-foreground">Plan</span>
-              <span className="inline-flex w-fit rounded-full bg-muted px-2.5 py-0.5 text-xs font-medium text-muted-foreground">
-                {org.plan.name}
+                {team.role}
               </span>
             </div>
           </CardContent>
@@ -295,17 +289,17 @@ export default function OrganizationSettingsPage() {
               ) : (
                 <span
                   className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                    org.settings.slaEnabled
+                    team.settings.slaEnabled
                       ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
                       : "bg-muted text-muted-foreground"
                   }`}
                 >
-                  {org.settings.slaEnabled ? "Enabled" : "Disabled"}
+                  {team.settings.slaEnabled ? "Enabled" : "Disabled"}
                 </span>
               )}
             </div>
 
-            {(isEditing ? editSlaEnabled : org.settings.slaEnabled) && (
+            {(isEditing ? editSlaEnabled : team.settings.slaEnabled) && (
               <div className="grid gap-2">
                 <span className="text-sm font-medium">
                   Response time target
@@ -330,7 +324,7 @@ export default function OrganizationSettingsPage() {
                 ) : (
                   <div className="flex items-center gap-2 text-sm">
                     <Clock className="h-4 w-4 text-muted-foreground" />
-                    <span>{org.settings.slaMinutes} minutes</span>
+                    <span>{team.settings.slaMinutes} minutes</span>
                   </div>
                 )}
               </div>
@@ -376,11 +370,11 @@ export default function OrganizationSettingsPage() {
               Team Members
             </CardTitle>
             <CardDescription>
-              People who belong to this organization.
+              People who belong to this team.
             </CardDescription>
           </CardHeader>
           <CardContent>
-            {!org.members || org.members.length === 0 ? (
+            {!team.members || team.members.length === 0 ? (
               <div className="flex flex-col items-center gap-2 py-6 text-center">
                 <Users className="h-8 w-8 text-muted-foreground" />
                 <p className="text-sm text-muted-foreground">
@@ -389,7 +383,7 @@ export default function OrganizationSettingsPage() {
               </div>
             ) : (
               <div className="divide-y">
-                {org.members.map((member) => {
+                {team.members.map((member) => {
                   const MemberRoleIcon = roleIcons[member.role] ?? User;
                   return (
                     <div
@@ -444,7 +438,7 @@ export default function OrganizationSettingsPage() {
               Team Invite Link
             </CardTitle>
             <CardDescription>
-              Share this link to invite new members to your organization. Anyone
+              Share this link to invite new members to your team. Anyone
               with the link can join as a member.
             </CardDescription>
           </CardHeader>

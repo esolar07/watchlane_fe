@@ -1,5 +1,5 @@
 export const WORKSPACE_HEADER_NAME = "X-Workspace-Id";
-export const ORG_HEADER_NAME = "X-Org-Id";
+export const TEAM_HEADER_NAME = "X-Team-Id";
 export const ACTIVE_WORKSPACE_STORAGE_KEY = "watchlane.activeWorkspaceId";
 
 let activeWorkspaceIdInMemory: string | null = null;

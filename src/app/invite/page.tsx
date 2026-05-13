@@ -18,7 +18,7 @@ function InviteContent() {
   const searchParams = useSearchParams();
   const code = searchParams.get("code");
 
-  const [orgName, setOrgName] = useState("");
+  const [teamName, setTeamName] = useState("");
   const [oauthUrl, setOauthUrl] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
@@ -33,7 +33,7 @@ function InviteContent() {
 
     getInviteUrl(code)
       .then((data) => {
-        setOrgName(data.organizationName);
+        setTeamName(data.teamName);
         setOauthUrl(data.url);
       })
       .catch((err) => {
@@ -78,7 +78,7 @@ function InviteContent() {
               You&apos;ve been invited
             </CardTitle>
             <CardDescription>
-              Join <span className="font-medium text-foreground">{orgName}</span> on
+              Join <span className="font-medium text-foreground">{teamName}</span> on
               WatchLane
             </CardDescription>
           </CardHeader>
@@ -88,7 +88,7 @@ function InviteContent() {
                 <Building2 className="h-5 w-5 text-primary" />
               </div>
               <div>
-                <p className="font-medium">{orgName}</p>
+                <p className="font-medium">{teamName}</p>
                 <p className="text-sm text-muted-foreground">
                   You&apos;ll join as a member
                 </p>

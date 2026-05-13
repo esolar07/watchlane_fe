@@ -22,7 +22,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { usePerformanceDashboard } from "@/hooks/usePerformanceDashboard";
 import { LateResponseTable } from "@/components/late-response-table";
-import { OrgTabNav } from "@/components/org-tab-nav";
+import { TeamTabNav } from "@/components/team-tab-nav";
 import { HelpTooltip } from "@/components/ui/help-tooltip";
 import {
   complianceColor,
@@ -50,10 +50,10 @@ function getDateRange(preset: DatePreset) {
   return { startDate: start.toISOString(), endDate: end.toISOString() };
 }
 
-export default function OrgPerformancePage() {
-  const params = useParams<{ id: string }>();
+export default function TeamPerformancePage() {
+  const params = useParams<{ teamId: string }>();
   const router = useRouter();
-  const orgId = params?.id ?? "";
+  const teamId = params?.teamId ?? "";
 
   const [datePreset, setDatePreset] = useState<DatePreset>("7d");
   const { startDate, endDate } = useMemo(
@@ -62,7 +62,7 @@ export default function OrgPerformancePage() {
   );
 
   const { data, isLoading, error } = usePerformanceDashboard({
-    orgId,
+    teamId,
     startDate,
     endDate,
   });
@@ -70,8 +70,8 @@ export default function OrgPerformancePage() {
   return (
     <div className="space-y-6">
       <PageHeader onBack={() => router.push("/dashboard")} />
-      <OrgTabNav
-        orgId={orgId}
+      <TeamTabNav
+        teamId={teamId}
         rightSlot={
           <DateFilter value={datePreset} onChange={setDatePreset} />
         }

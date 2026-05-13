@@ -4,11 +4,11 @@ export type EvaluationType =
   | "NO_REPLY"
   | "MANUAL_REVIEW";
 
-export type ScopeKind = "ORGANIZATION" | "ACCOUNT" | "FOLDER";
+export type ScopeKind = "TEAM" | "ACCOUNT" | "FOLDER";
 
 export interface Rule {
   id: string;
-  organizationId: string;
+  teamId: string;
   name: string;
   evaluationType: EvaluationType;
   scopeKind: ScopeKind;

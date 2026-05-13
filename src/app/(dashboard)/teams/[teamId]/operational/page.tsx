@@ -11,19 +11,19 @@ import {
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { useOrgDashboard } from "@/hooks/useOrgDashboard";
+import { useTeamDashboard } from "@/hooks/useTeamDashboard";
 import { ActivityFeed } from "@/components/activity-feed";
 import { NeedsAttentionKpis } from "@/components/needs-attention-kpis";
-import { OrgPerformanceTile } from "@/components/org-performance-tile";
-import { OrgThreadTable } from "@/components/org-thread-table";
-import { OrgTabNav } from "@/components/org-tab-nav";
+import { TeamPerformanceTile } from "@/components/team-performance-tile";
+import { TeamThreadTable } from "@/components/team-thread-table";
+import { TeamTabNav } from "@/components/team-tab-nav";
 import { getDateRange, type DatePreset } from "@/lib/date-presets";
-import type { OrgDashboard } from "@/types/dashboard";
+import type { TeamDashboard } from "@/types/dashboard";
 
-export default function OrgOperationalPage() {
-  const params = useParams<{ id: string }>();
+export default function TeamOperationalPage() {
+  const params = useParams<{ teamId: string }>();
   const router = useRouter();
-  const orgId = params?.id ?? "";
+  const teamId = params?.teamId ?? "";
 
   const [datePreset, setDatePreset] = useState<DatePreset>("7d");
   const { startDate, endDate } = useMemo(
@@ -31,8 +31,8 @@ export default function OrgOperationalPage() {
     [datePreset],
   );
 
-  const { data, isLoading, error, refetch } = useOrgDashboard({
-    orgId,
+  const { data, isLoading, error, refetch } = useTeamDashboard({
+    teamId,
     startDate,
     endDate,
   });
@@ -40,12 +40,12 @@ export default function OrgOperationalPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        organizationName={data?.organizationName}
+        teamName={data?.teamName}
         lastSyncAt={data?.lastSyncAt}
         onBack={() => router.push("/dashboard")}
       />
-      <OrgTabNav
-        orgId={orgId}
+      <TeamTabNav
+        teamId={teamId}
         rightSlot={
           <RefreshButton onClick={refetch} isRefreshing={isLoading} />
         }
@@ -62,11 +62,11 @@ export default function OrgOperationalPage() {
 }
 
 function PageHeader({
-  organizationName,
+  teamName,
   lastSyncAt,
   onBack,
 }: {
-  organizationName?: string;
+  teamName?: string;
   lastSyncAt?: string;
   onBack: () => void;
 }) {
@@ -82,7 +82,7 @@ function PageHeader({
         </div>
         <div>
           <h1 className="text-2xl font-bold tracking-tight">
-            {organizationName ?? "Operational"}
+            {teamName ?? "Operational"}
           </h1>
           <p className="text-sm text-muted-foreground">
             Live snapshot
@@ -142,7 +142,7 @@ function DashboardBody({
   datePreset,
   onDatePresetChange,
 }: {
-  data: OrgDashboard | null;
+  data: TeamDashboard | null;
   isLoading: boolean;
   error: string | null;
   datePreset: DatePreset;
@@ -154,12 +154,12 @@ function DashboardBody({
   return (
     <>
       <NeedsAttentionKpis kpis={data.kpis} />
-      <OrgThreadTable threads={data.threads} />
+      <TeamThreadTable threads={data.threads} />
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="lg:col-span-2">
           <ActivityFeed items={data.activity} />
         </div>
-        <OrgPerformanceTile
+        <TeamPerformanceTile
           performance={data.performance}
           datePreset={datePreset}
           onDatePresetChange={onDatePresetChange}

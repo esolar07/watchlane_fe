@@ -20,19 +20,19 @@ import {
   datePresetOptions,
   type DatePreset,
 } from "@/lib/date-presets";
-import type { OrgDashboardPerformance } from "@/types/dashboard";
+import type { TeamDashboardPerformance } from "@/types/dashboard";
 
-interface OrgPerformanceTileProps {
-  performance: OrgDashboardPerformance;
+interface TeamPerformanceTileProps {
+  performance: TeamDashboardPerformance;
   datePreset: DatePreset;
   onDatePresetChange: (next: DatePreset) => void;
 }
 
-export function OrgPerformanceTile({
+export function TeamPerformanceTile({
   performance,
   datePreset,
   onDatePresetChange,
-}: OrgPerformanceTileProps) {
+}: TeamPerformanceTileProps) {
   const compliance = performance.slaCompliancePercent;
   const avgResponse = performance.avgResponseFormatted || "—";
   return (

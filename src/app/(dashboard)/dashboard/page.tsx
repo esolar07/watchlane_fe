@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import {
   AlertOctagon,
@@ -22,7 +22,7 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { HelpTooltip } from "@/components/ui/help-tooltip";
-import { useAuth } from "@/components/AuthProvider";
+import { getTeams } from "@/services/api";
 import { useAggregateDashboard } from "@/hooks/useAggregateDashboard";
 import {
   useAllOperationalDashboards,
@@ -32,7 +32,7 @@ import { Metric, complianceColor } from "@/components/coverage-metrics";
 import { SnapshotBreakdown } from "@/components/snapshot-breakdown";
 import { cn, formatMinutes } from "@/lib/utils";
 import type { AggregateDashboard } from "@/types/dashboard";
-import type { Organization } from "@/types/organization";
+import type { Team } from "@/types/team";
 
 type DatePreset = "today" | "7d" | "30d" | "90d";
 
@@ -55,11 +55,12 @@ function getDateRange(preset: DatePreset) {
 }
 
 export default function DashboardPage() {
-  const { organizations } = useAuth();
-  const orgs = useMemo(
-    () => organizations.map((o) => ({ id: o.id, name: o.name })),
-    [organizations],
-  );
+  const [teams, setTeams] = useState<{ id: string; name: string }[]>([]);
+  useEffect(() => {
+    getTeams()
+      .then((rows) => setTeams(rows.map((row) => ({ id: row.id, name: row.name }))))
+      .catch(() => setTeams([]));
+  }, []);
   const [datePreset, setDatePreset] = useState<DatePreset>("7d");
   const { startDate, endDate } = useMemo(
     () => getDateRange(datePreset),
@@ -67,13 +68,13 @@ export default function DashboardPage() {
   );
 
   const aggregate = useAggregateDashboard({ startDate, endDate });
-  const perOrg = useAllOperationalDashboards(orgs);
+  const perTeam = useAllOperationalDashboards(teams);
 
-  const isRefreshing = aggregate.isLoading || perOrg.isLoading;
+  const isRefreshing = aggregate.isLoading || perTeam.isLoading;
 
   function refetchAll() {
     aggregate.refetch();
-    perOrg.refetch();
+    perTeam.refetch();
   }
 
   return (
@@ -82,7 +83,7 @@ export default function DashboardPage() {
         onRefresh={refetchAll}
         isRefreshing={isRefreshing}
       />
-      {organizations.length === 0 ? (
+      {teams.length === 0 ? (
         <EmptyOrgsState />
       ) : aggregate.error ? (
         <ErrorBanner message={aggregate.error} />
@@ -96,8 +97,8 @@ export default function DashboardPage() {
             datePreset={datePreset}
             onDatePresetChange={setDatePreset}
           />
-          {organizations.length > 1 && (
-            <OrgList organizations={organizations} entries={perOrg.entries} />
+          {teams.length > 1 && (
+            <TeamList teams={teams} entries={perTeam.entries} />
           )}
         </>
       ) : null}
@@ -119,7 +120,7 @@ function DashboardHeader({
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Dashboard</h1>
         <p className="text-sm text-muted-foreground">
-          Snapshot across all organizations.
+          Snapshot across all teams.
         </p>
       </div>
       <div className="flex items-center gap-2">
@@ -181,9 +182,9 @@ function EmptyOrgsState() {
         <div className="flex h-12 w-12 items-center justify-center rounded-full bg-muted">
           <Building2 className="h-6 w-6 text-muted-foreground" />
         </div>
-        <h3 className="text-sm font-medium">No organizations</h3>
+        <h3 className="text-sm font-medium">No teams</h3>
         <p className="text-sm text-muted-foreground">
-          Create or join an organization to see live activity here.
+          Create or join an team to see live activity here.
         </p>
       </CardContent>
     </Card>
@@ -230,7 +231,7 @@ function SnapshotSection({ data }: { data: AggregateDashboard }) {
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <KpiTile
           label="Open"
-          helpText="Threads currently uncovered across all organizations."
+          helpText="Threads currently uncovered across all teams."
           helpLink="/help#coverage"
           value={data.totalOpenThreads}
           icon={Inbox}
@@ -244,8 +245,8 @@ function SnapshotSection({ data }: { data: AggregateDashboard }) {
           valueClassName={data.totalOverdue > 0 ? "text-red-600" : undefined}
           footer={
             <ImpactedOrgsLine
-              impactedCount={data.impactedOrgs.length}
-              totalOrgs={data.totalOrgs}
+              impactedCount={data.impactedTeams?.length ?? 0}
+              totalTeams={data.totalTeams ?? 0}
             />
           }
         />
@@ -259,7 +260,7 @@ function SnapshotSection({ data }: { data: AggregateDashboard }) {
         />
         <KpiTile
           label="Oldest Gap"
-          helpText="Longest-waiting open thread across all organizations."
+          helpText="Longest-waiting open thread across all teams."
           helpLink="/help#oldest-gap"
           value={data.oldestGapMinutes > 0 ? data.oldestGapFormatted : "—"}
           icon={Timer}
@@ -349,15 +350,15 @@ function KpiTile({
 
 function ImpactedOrgsLine({
   impactedCount,
-  totalOrgs,
+  totalTeams,
 }: {
   impactedCount: number;
-  totalOrgs: number;
+  totalTeams: number;
 }) {
   return (
     <p className="text-xs text-muted-foreground">
-      {impactedCount} of {totalOrgs}{" "}
-      {totalOrgs === 1 ? "org" : "orgs"} impacted
+      {impactedCount} of {totalTeams}{" "}
+      {totalTeams === 1 ? "team" : "teams"} impacted
     </p>
   );
 }
@@ -391,23 +392,23 @@ function ComplianceTile({ compliancePercent }: { compliancePercent: number }) {
   );
 }
 
-function OrgList({
-  organizations,
+function TeamList({
+  teams,
   entries,
 }: {
-  organizations: Organization[];
+  teams: { id: string; name: string }[];
   entries: OperationalEntry[];
 }) {
-  const entryByOrgId = new Map(entries.map((e) => [e.orgId, e]));
+  const entryByTeamId = new Map(entries.map((e) => [e.teamId, e]));
   return (
-    <section aria-label="Per-organization snapshot" className="space-y-3">
-      <SectionHeading title="Organizations" hint="Live snapshot per org" />
+    <section aria-label="Per-team snapshot" className="space-y-3">
+      <SectionHeading title="Teams" hint="Live snapshot per team" />
       <div className="space-y-3">
-        {organizations.map((org) => (
-          <OrgRow
-            key={org.id}
-            organization={org}
-            entry={entryByOrgId.get(org.id)}
+        {teams.map((team) => (
+          <TeamRow
+            key={team.id}
+            team={team}
+            entry={entryByTeamId.get(team.id)}
           />
         ))}
       </div>
@@ -415,26 +416,26 @@ function OrgList({
   );
 }
 
-type OrgSeverity = "red" | "amber" | "neutral";
+type TeamSeverity = "red" | "amber" | "neutral";
 
-function severityFor(entry?: OperationalEntry): OrgSeverity {
+function severityFor(entry?: OperationalEntry): TeamSeverity {
   if (!entry?.data) return "neutral";
   if (entry.data.overdueCount > 0) return "red";
   if (entry.data.atRiskCount > 0) return "amber";
   return "neutral";
 }
 
-const SEVERITY_BORDER: Record<OrgSeverity, string> = {
+const SEVERITY_BORDER: Record<TeamSeverity, string> = {
   red: "border-l-4 border-l-red-500",
   amber: "border-l-4 border-l-amber-500",
   neutral: "border-l-4 border-l-transparent",
 };
 
-function OrgRow({
-  organization,
+function TeamRow({
+  team,
   entry,
 }: {
-  organization: Organization;
+  team: { id: string; name: string };
   entry?: OperationalEntry;
 }) {
   const severity = severityFor(entry);
@@ -442,13 +443,13 @@ function OrgRow({
     <Card className={cn("relative pb-10", SEVERITY_BORDER[severity])}>
       <CardContent className="py-4">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <OrgIdentity
-            organization={organization}
+          <TeamIdentity
+            team={team}
             entry={entry}
             severity={severity}
           />
           {entry?.data ? (
-            <OrgRowMetrics data={entry.data} />
+            <TeamRowMetrics data={entry.data} />
           ) : entry?.error ? (
             <span className="text-xs text-destructive">{entry.error}</span>
           ) : (
@@ -457,7 +458,7 @@ function OrgRow({
         </div>
       </CardContent>
       <Link
-        href={`/organizations/${organization.id}/operational`}
+        href={`/teams/${team.id}/operational`}
         className="absolute bottom-3 right-6 inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline"
       >
         Open dashboard
@@ -467,14 +468,14 @@ function OrgRow({
   );
 }
 
-function OrgIdentity({
-  organization,
+function TeamIdentity({
+  team,
   entry,
   severity,
 }: {
-  organization: Organization;
+  team: { id: string; name: string };
   entry?: OperationalEntry;
-  severity: OrgSeverity;
+  severity: TeamSeverity;
 }) {
   const slaTarget = entry?.data?.slaTarget;
   return (
@@ -484,7 +485,7 @@ function OrgIdentity({
       </div>
       <div>
         <div className="flex items-center gap-2">
-          <p className="font-medium leading-none">{organization.name}</p>
+          <p className="font-medium leading-none">{team.name}</p>
           {severity === "red" && (
             <ShieldAlert
               className="h-4 w-4 text-red-500"
@@ -508,7 +509,7 @@ function OrgIdentity({
   );
 }
 
-function OrgRowMetrics({
+function TeamRowMetrics({
   data,
 }: {
   data: NonNullable<OperationalEntry["data"]>;

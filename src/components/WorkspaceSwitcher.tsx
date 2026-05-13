@@ -11,6 +11,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
   DialogContent,
@@ -22,7 +23,9 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useWorkspace } from "@/hooks/useWorkspace";
+import { useEntitlements } from "@/hooks/useEntitlements";
 import { createWorkspace } from "@/services/api";
+import { isLimitReachedError } from "@/lib/errors";
 import { cn } from "@/lib/utils";
 
 interface WorkspaceSwitcherProps {
@@ -31,20 +34,39 @@ interface WorkspaceSwitcherProps {
 
 export function WorkspaceSwitcher({ collapsed = false }: WorkspaceSwitcherProps) {
   const { workspaces, activeWorkspace, isLoading, selectWorkspace, refetch } = useWorkspace();
+  const { isWithinLimit } = useEntitlements();
   const [createOpen, setCreateOpen] = useState(false);
+  const canCreateWorkspace = isWithinLimit("workspace_limit");
 
   if (isLoading && !activeWorkspace) return <SwitcherSkeleton collapsed={collapsed} />;
-  if (!activeWorkspace) return <CreateFirstWorkspace onClick={() => setCreateOpen(true)} createOpen={createOpen} setCreateOpen={setCreateOpen} onCreated={refetch} />;
+  if (!activeWorkspace) {
+    return (
+      <CreateFirstWorkspace
+        canCreate={canCreateWorkspace}
+        createOpen={createOpen}
+        setCreateOpen={setCreateOpen}
+        onCreated={refetch}
+      />
+    );
+  }
 
   return (
     <>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="ghost" className={cn("w-full justify-between gap-2 bg-sidebar-accent/40 text-sidebar-foreground hover:bg-sidebar-accent/60", collapsed && "h-9 w-9 p-0")}>
+          <Button
+            variant="ghost"
+            className={cn(
+              "w-full justify-between gap-2 bg-sidebar-accent/40 text-sidebar-foreground hover:bg-sidebar-accent/60",
+              collapsed && "h-9 w-9 p-0",
+            )}
+          >
             {collapsed ? (
-              <span className="text-sm font-semibold">{activeWorkspace.name.slice(0, 1).toUpperCase()}</span>
+              <span className="text-sm font-semibold">
+                {activeWorkspace.name.slice(0, 1).toUpperCase()}
+              </span>
             ) : (
-              <SwitcherLabel workspaceName={activeWorkspace.name} planName={activeWorkspace.currentPlan.name} />
+              <SwitcherLabel workspaceName={activeWorkspace.name} isOwner={activeWorkspace.role === "OWNER"} />
             )}
             {!collapsed && <ChevronsUpDown className="h-4 w-4 shrink-0 opacity-60" />}
           </Button>
@@ -60,17 +82,21 @@ export function WorkspaceSwitcher({ collapsed = false }: WorkspaceSwitcherProps)
               <div className="flex flex-col">
                 <span className="text-sm font-medium">{workspace.name}</span>
                 <span className="text-xs text-muted-foreground">
-                  {workspace.role} · {workspace.currentPlan.name}
+                  {workspace.role === "OWNER" ? "Owner" : workspace.role}
                 </span>
               </div>
               {workspace.id === activeWorkspace.id && <Check className="h-4 w-4 text-primary" />}
             </DropdownMenuItem>
           ))}
-          <DropdownMenuSeparator />
-          <DropdownMenuItem onSelect={() => setCreateOpen(true)} className="gap-2">
-            <Plus className="h-4 w-4" />
-            <span>Create workspace…</span>
-          </DropdownMenuItem>
+          {canCreateWorkspace && (
+            <>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onSelect={() => setCreateOpen(true)} className="gap-2">
+                <Plus className="h-4 w-4" />
+                <span>Create workspace…</span>
+              </DropdownMenuItem>
+            </>
+          )}
         </DropdownMenuContent>
       </DropdownMenu>
       <CreateWorkspaceDialog
@@ -85,38 +111,54 @@ export function WorkspaceSwitcher({ collapsed = false }: WorkspaceSwitcherProps)
   );
 }
 
-function SwitcherLabel({ workspaceName, planName }: { workspaceName: string; planName: string }) {
+function SwitcherLabel({ workspaceName, isOwner }: { workspaceName: string; isOwner: boolean }) {
   return (
-    <div className="flex min-w-0 flex-col items-start text-left">
+    <div className="flex min-w-0 flex-1 items-center gap-2 text-left">
       <span className="truncate text-sm font-medium">{workspaceName}</span>
-      <span className="truncate text-xs text-sidebar-foreground/60">{planName}</span>
+      {isOwner && <Badge variant="outline" className="text-[10px]">Owner</Badge>}
     </div>
   );
 }
 
 function SwitcherSkeleton({ collapsed }: { collapsed: boolean }) {
   return (
-    <div className={cn("flex items-center gap-2 rounded-md bg-sidebar-accent/30 px-3 py-2", collapsed && "h-9 w-9 justify-center p-0")}>
+    <div
+      className={cn(
+        "flex items-center gap-2 rounded-md bg-sidebar-accent/30 px-3 py-2",
+        collapsed && "h-9 w-9 justify-center p-0",
+      )}
+    >
       <Loader2 className="h-4 w-4 animate-spin opacity-60" />
     </div>
   );
 }
 
 interface CreateFirstWorkspaceProps {
-  onClick: () => void;
+  canCreate: boolean;
   createOpen: boolean;
   setCreateOpen: (open: boolean) => void;
   onCreated: () => Promise<void>;
 }
 
-function CreateFirstWorkspace({ onClick, createOpen, setCreateOpen, onCreated }: CreateFirstWorkspaceProps) {
+function CreateFirstWorkspace({ canCreate, createOpen, setCreateOpen, onCreated }: CreateFirstWorkspaceProps) {
+  if (!canCreate) return null;
   return (
     <>
-      <Button variant="ghost" onClick={onClick} className="w-full justify-start gap-2 text-sidebar-foreground/80">
+      <Button
+        variant="ghost"
+        onClick={() => setCreateOpen(true)}
+        className="w-full justify-start gap-2 text-sidebar-foreground/80"
+      >
         <Plus className="h-4 w-4" />
         <span className="text-sm">New workspace</span>
       </Button>
-      <CreateWorkspaceDialog open={createOpen} onOpenChange={setCreateOpen} onCreated={async () => { await onCreated(); }} />
+      <CreateWorkspaceDialog
+        open={createOpen}
+        onOpenChange={setCreateOpen}
+        onCreated={async () => {
+          await onCreated();
+        }}
+      />
     </>
   );
 }
@@ -132,12 +174,14 @@ function CreateWorkspaceDialog({ open, onOpenChange, onCreated }: CreateWorkspac
   const [submitting, setSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
+  function reset() {
+    setName("");
+    setErrorMessage(null);
+  }
+
   function handleClose(nextOpen: boolean) {
     onOpenChange(nextOpen);
-    if (!nextOpen) {
-      setName("");
-      setErrorMessage(null);
-    }
+    if (!nextOpen) reset();
   }
 
   async function handleSubmit(event: React.FormEvent) {
@@ -151,7 +195,7 @@ function CreateWorkspaceDialog({ open, onOpenChange, onCreated }: CreateWorkspac
       await onCreated(created.id);
       handleClose(false);
     } catch (caught) {
-      setErrorMessage(caught instanceof Error ? caught.message : "Failed to create workspace");
+      setErrorMessage(formatCreateError(caught));
     } finally {
       setSubmitting(false);
     }
@@ -162,9 +206,7 @@ function CreateWorkspaceDialog({ open, onOpenChange, onCreated }: CreateWorkspac
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Create workspace</DialogTitle>
-          <DialogDescription>
-            Workspaces own your organizations and billing.
-          </DialogDescription>
+          <DialogDescription>Workspaces hold your teams.</DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid gap-2">
@@ -172,8 +214,8 @@ function CreateWorkspaceDialog({ open, onOpenChange, onCreated }: CreateWorkspac
             <Input
               id="workspace-name"
               value={name}
-              onChange={(event) => setName(event.target.value)}
-              placeholder="e.g. Acme Corp"
+              onChange={(changeEvent) => setName(changeEvent.target.value)}
+              placeholder="Acme Corp"
               autoFocus
               disabled={submitting}
             />
@@ -191,4 +233,12 @@ function CreateWorkspaceDialog({ open, onOpenChange, onCreated }: CreateWorkspac
       </DialogContent>
     </Dialog>
   );
+}
+
+function formatCreateError(caught: unknown): string {
+  if (isLimitReachedError(caught)) {
+    const body = caught.body;
+    return `You've used ${body.current ?? "all"} of ${body.limit ?? "your"} workspaces.`;
+  }
+  return caught instanceof Error ? caught.message : "Failed to create workspace";
 }

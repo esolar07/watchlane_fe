@@ -13,7 +13,8 @@ interface LimitBadgeProps {
 
 function readUsageFor(entitlements: Entitlements, feature: LimitFeatureKey): number {
   if (feature === "mailbox_limit") return entitlements.usage.mailboxes_used;
-  if (feature === "org_limit") return entitlements.usage.orgs_used;
+  if (feature === "team_limit") return entitlements.usage.teams_used;
+  if (feature === "workspace_limit") return entitlements.usage.workspaces_used;
   return 0;
 }
 

@@ -1,21 +1,25 @@
+export type WorkspaceRole = "OWNER" | "ADMIN" | "MEMBER";
+export type AssignableWorkspaceRole = "ADMIN" | "MEMBER";
+
 export interface WorkspaceSummary {
   id: string;
   name: string;
-  role: "OWNER" | "ADMIN" | "MEMBER";
+  ownerUserId: string;
+  role: WorkspaceRole;
   createdAt: string;
-  currentPlan: { slug: string; name: string };
+  updatedAt: string;
 }
 
 export interface WorkspaceMember {
   userId: string;
   name: string;
   email: string;
-  role: "OWNER" | "ADMIN" | "MEMBER";
+  role: AssignableWorkspaceRole;
 }
 
 export interface WorkspaceDetail {
   id: string;
   name: string;
-  currentPlan: { slug: string; name: string };
+  ownerUserId: string;
   members: WorkspaceMember[];
 }

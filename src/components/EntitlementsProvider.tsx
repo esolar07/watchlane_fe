@@ -30,7 +30,8 @@ const EntitlementsContext = createContext<EntitlementsContextValue | null>(null)
 
 function readUsageFor(entitlements: Entitlements, key: LimitFeatureKey): number {
   if (key === "mailbox_limit") return entitlements.usage.mailboxes_used;
-  if (key === "org_limit") return entitlements.usage.orgs_used;
+  if (key === "team_limit") return entitlements.usage.teams_used;
+  if (key === "workspace_limit") return entitlements.usage.workspaces_used;
   return 0;
 }
 

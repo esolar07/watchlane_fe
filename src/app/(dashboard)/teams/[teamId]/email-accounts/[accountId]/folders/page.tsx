@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useParams, useRouter, useSearchParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { ArrowLeft, Mail, AlertOctagon, FolderTree as FolderTreeIcon } from "lucide-react";
 import {
   Card,
@@ -19,18 +19,11 @@ import {
 import type { EmailAccount, EmailFolder } from "@/types/email-account";
 import { FolderTree } from "@/components/folder-tree";
 import type { MonitoredState } from "@/components/folder-monitored-control";
-import { useAuth } from "@/components/AuthProvider";
-
 export default function EmailAccountFoldersPage() {
-  const params = useParams<{ accountId: string }>();
-  const searchParams = useSearchParams();
+  const params = useParams<{ accountId: string; teamId: string }>();
   const router = useRouter();
-  const { organizations } = useAuth();
   const accountId = params?.accountId ?? "";
-  const orgIdFromQuery = searchParams?.get("orgId") ?? "";
-  const orgId =
-    orgIdFromQuery ||
-    (organizations.length === 1 ? organizations[0].id : "");
+  const teamId = params?.teamId ?? "";
 
   const [account, setAccount] = useState<EmailAccount | null>(null);
   const [folders, setFolders] = useState<EmailFolder[]>([]);
@@ -43,17 +36,12 @@ export default function EmailAccountFoldersPage() {
   const isGmail = account?.provider === "google";
 
   useEffect(() => {
-    if (!accountId) return;
-    if (!orgId) {
-      setLoadError("Missing organization context. Open this page from the Email Accounts list.");
-      setIsLoading(false);
-      return;
-    }
+    if (!accountId || !teamId) return;
     let cancelled = false;
     setIsLoading(true);
     setLoadError(null);
 
-    getEmailAccount(accountId, orgId)
+    getEmailAccount(accountId, teamId)
       .then((acct) => {
         if (cancelled) return;
         setAccount(acct);
@@ -62,7 +50,7 @@ export default function EmailAccountFoldersPage() {
           setIsLoading(false);
           return null;
         }
-        return getEmailAccountFolders(accountId, orgId).then(({ folders }) => {
+        return getEmailAccountFolders(accountId, teamId).then(({ folders }) => {
           if (cancelled) return;
           setFolders(folders);
           setIsLoading(false);
@@ -79,7 +67,7 @@ export default function EmailAccountFoldersPage() {
     return () => {
       cancelled = true;
     };
-  }, [accountId, orgId]);
+  }, [accountId, teamId]);
 
   const handleToggle = useCallback(
     async (folder: EmailFolder, next: MonitoredState) => {
@@ -101,7 +89,7 @@ export default function EmailAccountFoldersPage() {
         const { folder: updated } = await setFolderMonitored(
           folder.id,
           next,
-          orgId,
+          teamId,
         );
         setFolders((prev) =>
           prev.map((f) => (f.id === updated.id ? updated : f)),
@@ -130,7 +118,7 @@ export default function EmailAccountFoldersPage() {
         }
       }
     },
-    [pendingIds, orgId],
+    [pendingIds, teamId],
   );
 
   const headerTitle = useMemo(() => {
@@ -144,7 +132,7 @@ export default function EmailAccountFoldersPage() {
         <Button
           variant="ghost"
           size="icon"
-          onClick={() => router.push("/email-accounts")}
+          onClick={() => router.push(`/teams/${teamId}/email-accounts`)}
           aria-label="Back to email accounts"
         >
           <ArrowLeft className="h-4 w-4" />

@@ -91,26 +91,26 @@ export const helpTopics: HelpTopic[] = [
     ],
   },
   {
-    id: "organizations",
-    title: "Organizations",
+    id: "teams",
+    title: "Teams",
     definitions: [
       {
-        id: "organization",
-        question: "What is an organization?",
+        id: "team",
+        question: "What is an team?",
         answer:
-          "An organization is a workspace that groups its members, connected mailboxes, and rules. A user can belong to more than one organization.",
+          "An team is a workspace that groups its members, connected mailboxes, and rules. A user can belong to more than one team.",
       },
       {
-        id: "multi-org",
-        question: "Can I have more than one organization?",
+        id: "multi-team",
+        question: "Can I have more than one team?",
         answer:
-          "Yes. The dashboard shows a snapshot per organization, and pages that act on a single org (such as folder settings or rules) use the organization tied to the page you opened.",
+          "Yes. The dashboard shows a snapshot per team, and pages that act on a single team (such as folder settings or rules) use the team tied to the page you opened.",
       },
       {
         id: "invite-members",
         question: "How do I invite team members?",
         answer:
-          "On the organization detail page, owners and admins can copy the team invite link and share it. Anyone with the link can join. The invite link can be regenerated to revoke the old one.",
+          "On the team detail page, owners and admins can copy the team invite link and share it. Anyone with the link can join. The invite link can be regenerated to revoke the old one.",
       },
     ],
   },
@@ -122,13 +122,13 @@ export const helpTopics: HelpTopic[] = [
         id: "rule",
         question: "What is a rule?",
         answer:
-          "A rule defines what Watchlane evaluates on tracked threads and where it applies. Rules are managed from the organization's Rules page.",
+          "A rule defines what Watchlane evaluates on tracked threads and where it applies. Rules are managed from the team's Rules page.",
       },
       {
         id: "rule-scope",
         question: "What is a rule's scope?",
         answer:
-          "Scope controls where a rule applies. Organization scope covers every connected mailbox; Account scope targets one mailbox; Folder scope targets a single monitored folder.",
+          "Scope controls where a rule applies. Team scope covers every connected mailbox; Account scope targets one mailbox; Folder scope targets a single monitored folder.",
       },
       {
         id: "rule-evaluation",

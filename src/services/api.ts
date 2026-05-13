@@ -1,18 +1,31 @@
-import { Organization, OrganizationDetail, CreateOrganizationPayload, UpdateOrganizationPayload } from "@/types/organization";
+import {
+  Team,
+  TeamDetail,
+  CreateTeamPayload,
+  UpdateTeamPayload,
+} from "@/types/team";
 import {
   DashboardSummary,
   AggregateDashboard,
   OperationalDashboard,
-  OrgDashboard,
+  TeamDashboard,
   PerformanceDashboard,
 } from "@/types/dashboard";
 import { MeResponse } from "@/types/auth";
 import { EmailAccount, EmailFolder } from "@/types/email-account";
 import { Rule, CreateRulePayload } from "@/types/rule";
-import { WorkspaceSummary, WorkspaceDetail, WorkspaceMember } from "@/types/workspace";
-import { Plan, PlanPrice, PriceInterval } from "@/types/plan";
+import {
+  WorkspaceSummary,
+  WorkspaceDetail,
+  WorkspaceMember,
+  AssignableWorkspaceRole,
+} from "@/types/workspace";
 import { Entitlements } from "@/types/entitlements";
-import { WORKSPACE_HEADER_NAME, getActiveWorkspaceId } from "@/lib/workspace/constants";
+import {
+  WORKSPACE_HEADER_NAME,
+  TEAM_HEADER_NAME,
+  getActiveWorkspaceId,
+} from "@/lib/workspace/constants";
 import { parseHttpError } from "@/lib/errors";
 
 const BASE_URL = process.env.NEXT_PUBLIC_WATCHLANE_BASE_API;
@@ -29,12 +42,27 @@ function unwrapList<T>(body: unknown, ...keys: string[]): T[] {
   return [];
 }
 
-type RequestOptions = { method?: string; body?: unknown; extraHeaders?: Record<string, string> };
+type Scope = "workspace" | "team" | "none";
 
-async function workspaceRequest<T>(path: string, options: RequestOptions = {}): Promise<T> {
+interface RequestOptions {
+  method?: string;
+  body?: unknown;
+  scope?: Scope;
+  teamId?: string;
+  extraHeaders?: Record<string, string>;
+}
+
+function buildScopedHeaders(scope: Scope, teamId?: string): Record<string, string> {
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
   const workspaceId = getActiveWorkspaceId();
-  const headers: Record<string, string> = { "Content-Type": "application/json", ...options.extraHeaders };
-  if (workspaceId) headers[WORKSPACE_HEADER_NAME] = workspaceId;
+  if (scope !== "none" && workspaceId) headers[WORKSPACE_HEADER_NAME] = workspaceId;
+  if (scope === "team" && teamId) headers[TEAM_HEADER_NAME] = teamId;
+  return headers;
+}
+
+async function apiRequest<T>(path: string, options: RequestOptions = {}): Promise<T> {
+  const scope = options.scope ?? "none";
+  const headers = { ...buildScopedHeaders(scope, options.teamId), ...options.extraHeaders };
   const response = await fetch(`${BASE_URL}${path}`, {
     method: options.method ?? "GET",
     credentials: "include",
@@ -46,75 +74,75 @@ async function workspaceRequest<T>(path: string, options: RequestOptions = {}): 
   return response.json();
 }
 
-export async function getMe(): Promise<MeResponse> {
-  const response = await fetch(`${BASE_URL}/api/auth/me`, { credentials: "include" });
-  if (!response.ok) throw new Error("Not authenticated");
-  return response.json();
+export function getMe(): Promise<MeResponse> {
+  return apiRequest<MeResponse>("/api/me");
 }
 
-export async function getDashboardSummary(): Promise<DashboardSummary> {
-  const response = await fetch(`${BASE_URL}/api/dashboard/summary`, { credentials: "include" });
-  if (!response.ok) throw await parseHttpError(response, "Failed to fetch dashboard summary");
-  return response.json();
+export function updateMe(payload: { name: string }): Promise<MeResponse> {
+  return apiRequest<MeResponse>("/api/me", { method: "PATCH", body: payload });
 }
 
-export async function getOrganizations(): Promise<OrganizationDetail[]> {
-  const response = await fetch(`${BASE_URL}/api/organizations`, { credentials: "include" });
-  if (!response.ok) throw await parseHttpError(response, "Failed to fetch organizations");
-  return response.json();
+export interface OnboardingPayload {
+  workspaceName: string;
+  teamName: string;
+  profileName?: string;
 }
 
-export async function getOrganization(orgId: string): Promise<OrganizationDetail> {
-  const response = await fetch(`${BASE_URL}/api/organizations/${orgId}`, { credentials: "include" });
-  if (response.status === 404) throw new Error("Organization not found");
-  if (!response.ok) throw await parseHttpError(response, "Failed to fetch organization");
-  return response.json();
+export interface OnboardingResponse {
+  user: MeResponse;
+  workspace: WorkspaceSummary;
+  team: TeamDetail;
 }
 
-export async function updateOrganization(orgId: string, payload: UpdateOrganizationPayload): Promise<OrganizationDetail> {
-  const response = await fetch(`${BASE_URL}/api/organizations/${orgId}`, {
+export function completeOnboarding(payload: OnboardingPayload): Promise<OnboardingResponse> {
+  return apiRequest<OnboardingResponse>("/api/onboarding", { method: "POST", body: payload });
+}
+
+export function getDashboardSummary(): Promise<DashboardSummary> {
+  return apiRequest<DashboardSummary>("/api/dashboard/summary");
+}
+
+export function getTeams(): Promise<TeamDetail[]> {
+  return apiRequest<TeamDetail[]>("/api/teams");
+}
+
+export function getTeam(teamId: string): Promise<TeamDetail> {
+  return apiRequest<TeamDetail>(`/api/teams/${teamId}`, { scope: "team", teamId });
+}
+
+export function updateTeam(teamId: string, payload: UpdateTeamPayload): Promise<TeamDetail> {
+  return apiRequest<TeamDetail>(`/api/teams/${teamId}`, {
     method: "PUT",
-    credentials: "include",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
+    scope: "team",
+    teamId,
+    body: payload,
   });
-  if (!response.ok) throw await parseHttpError(response, "Failed to update organization");
-  return response.json();
 }
 
-export async function createOrganization(payload: CreateOrganizationPayload): Promise<Organization> {
-  const workspaceId = getActiveWorkspaceId();
-  const headers: Record<string, string> = { "Content-Type": "application/json" };
-  if (workspaceId) headers[WORKSPACE_HEADER_NAME] = workspaceId;
-  const response = await fetch(`${BASE_URL}/api/organizations`, {
+export function createTeam(payload: CreateTeamPayload): Promise<Team> {
+  return apiRequest<Team>("/api/teams", { method: "POST", scope: "workspace", body: payload });
+}
+
+export function regenerateInviteCode(teamId: string): Promise<TeamDetail> {
+  return apiRequest<TeamDetail>(`/api/teams/${teamId}/regenerate-invite`, {
     method: "POST",
-    credentials: "include",
-    headers,
-    body: JSON.stringify(payload),
+    scope: "team",
+    teamId,
   });
-  if (!response.ok) throw await parseHttpError(response, "Failed to create organization");
-  return response.json();
 }
 
-export async function regenerateInviteCode(orgId: string): Promise<OrganizationDetail> {
-  const response = await fetch(`${BASE_URL}/api/organizations/${orgId}/regenerate-invite`, {
-    method: "POST",
-    credentials: "include",
-  });
-  if (!response.ok) throw await parseHttpError(response, "Failed to regenerate invite code");
-  return response.json();
-}
-
-export async function getAuthMailboxUrl(mailbox: string, orgId: string): Promise<{ url: string }> {
+export async function getAuthMailboxUrl(mailbox: string, teamId: string): Promise<{ url: string }> {
   const url = new URL(`${BASE_URL}/api/auth/${mailbox}/connect-url`);
-  url.searchParams.set("orgId", orgId);
+  url.searchParams.set("teamId", teamId);
   const response = await fetch(url.toString(), { credentials: "include" });
   if (!response.ok) throw await parseHttpError(response, "Failed to get mailbox connection URL");
   return response.json();
 }
 
-export async function getInviteUrl(inviteCode: string): Promise<{ url: string; organizationName: string }> {
-  const response = await fetch(`${BASE_URL}/api/auth/microsoft/invite-url?inviteCode=${encodeURIComponent(inviteCode)}`);
+export async function getInviteUrl(inviteCode: string): Promise<{ url: string; teamName: string }> {
+  const response = await fetch(
+    `${BASE_URL}/api/auth/microsoft/invite-url?inviteCode=${encodeURIComponent(inviteCode)}`,
+  );
   if (response.status === 404) throw new Error("Invalid or expired invite link");
   if (!response.ok) throw await parseHttpError(response, "Failed to get invite URL");
   return response.json();
@@ -126,225 +154,176 @@ export async function getAuthUrls(): Promise<{ microsoft: string; google: string
   return response.json();
 }
 
-export async function getAggregateDashboard(params: { startDate: string; endDate: string }): Promise<AggregateDashboard> {
-  const url = new URL(`${BASE_URL}/api/dashboard/aggregate`);
-  url.searchParams.set("startDate", params.startDate);
-  url.searchParams.set("endDate", params.endDate);
-  const response = await fetch(url.toString(), { credentials: "include" });
-  if (!response.ok) throw await parseHttpError(response, "Failed to fetch aggregate dashboard");
-  return response.json();
+export function getAggregateDashboard(params: {
+  startDate: string;
+  endDate: string;
+}): Promise<AggregateDashboard> {
+  const query = new URLSearchParams(params).toString();
+  return apiRequest<AggregateDashboard>(`/api/dashboard/aggregate?${query}`);
 }
 
-export async function getOrgDashboard(params: { orgId: string; startDate: string; endDate: string }): Promise<OrgDashboard> {
-  const url = new URL(`${BASE_URL}/api/dashboard/org`);
-  url.searchParams.set("orgId", params.orgId);
-  url.searchParams.set("startDate", params.startDate);
-  url.searchParams.set("endDate", params.endDate);
-  const response = await fetch(url.toString(), { credentials: "include" });
-  if (!response.ok) throw await parseHttpError(response, "Failed to fetch org dashboard");
-  return response.json();
+export function getTeamDashboard(params: {
+  teamId: string;
+  startDate: string;
+  endDate: string;
+}): Promise<TeamDashboard> {
+  const query = new URLSearchParams({ startDate: params.startDate, endDate: params.endDate }).toString();
+  return apiRequest<TeamDashboard>(`/api/dashboard/team?${query}`, { scope: "team", teamId: params.teamId });
 }
 
-export async function getOperationalDashboard(params: { orgId: string; repId?: string }): Promise<OperationalDashboard> {
-  const url = new URL(`${BASE_URL}/api/dashboard/operational`);
-  url.searchParams.set("orgId", params.orgId);
-  if (params.repId) url.searchParams.set("repId", params.repId);
-  const response = await fetch(url.toString(), { credentials: "include" });
-  if (!response.ok) throw await parseHttpError(response, "Failed to fetch operational dashboard");
-  return response.json();
-}
-
-export async function getPerformanceDashboard(params: { orgId: string; startDate: string; endDate: string; repId?: string }): Promise<PerformanceDashboard> {
-  const url = new URL(`${BASE_URL}/api/dashboard/performance`);
-  url.searchParams.set("orgId", params.orgId);
-  url.searchParams.set("startDate", params.startDate);
-  url.searchParams.set("endDate", params.endDate);
-  if (params.repId) url.searchParams.set("repId", params.repId);
-  const response = await fetch(url.toString(), { credentials: "include" });
-  if (!response.ok) throw await parseHttpError(response, "Failed to fetch performance dashboard");
-  return response.json();
-}
-
-export async function triggerSync(): Promise<{ message: string }> {
-  const response = await fetch(`${BASE_URL}/api/dashboard/sync`, { method: "POST", credentials: "include" });
-  if (!response.ok) throw await parseHttpError(response, "Failed to sync mail");
-  return response.json();
-}
-
-export async function getEmailAccounts(orgId: string): Promise<EmailAccount[]> {
-  const url = new URL(`${BASE_URL}/api/email-accounts`);
-  url.searchParams.set("orgId", orgId);
-  const response = await fetch(url.toString(), { credentials: "include" });
-  if (!response.ok) throw await parseHttpError(response, "Failed to fetch email accounts");
-  return unwrapList<EmailAccount>(await response.json(), "emailAccounts", "accounts");
-}
-
-export async function getEmailAccount(accountId: string, orgId: string): Promise<EmailAccount> {
-  const response = await fetch(`${BASE_URL}/api/email-accounts/${accountId}`, {
-    credentials: "include",
-    headers: { "x-org-id": orgId },
+export function getOperationalDashboard(params: {
+  teamId: string;
+  repId?: string;
+}): Promise<OperationalDashboard> {
+  const query = new URLSearchParams(params.repId ? { repId: params.repId } : {}).toString();
+  const suffix = query ? `?${query}` : "";
+  return apiRequest<OperationalDashboard>(`/api/dashboard/operational${suffix}`, {
+    scope: "team",
+    teamId: params.teamId,
   });
-  if (!response.ok) throw await parseHttpError(response, "Failed to fetch email account");
-  return response.json();
 }
 
-export async function getEmailAccountFolders(accountId: string, orgId: string): Promise<{ folders: EmailFolder[] }> {
-  const response = await fetch(`${BASE_URL}/api/email-accounts/${accountId}/folders`, {
-    credentials: "include",
-    headers: { "x-org-id": orgId },
+export function getPerformanceDashboard(params: {
+  teamId: string;
+  startDate: string;
+  endDate: string;
+  repId?: string;
+}): Promise<PerformanceDashboard> {
+  const query = new URLSearchParams({
+    startDate: params.startDate,
+    endDate: params.endDate,
+    ...(params.repId ? { repId: params.repId } : {}),
+  }).toString();
+  return apiRequest<PerformanceDashboard>(`/api/dashboard/performance?${query}`, {
+    scope: "team",
+    teamId: params.teamId,
   });
-  if (!response.ok) throw await parseHttpError(response, "Failed to fetch folders");
-  return { folders: unwrapList<EmailFolder>(await response.json(), "folders", "data") };
 }
 
-export async function setFolderMonitored(folderId: string, monitored: boolean | null, orgId: string): Promise<{ folder: EmailFolder }> {
-  const response = await fetch(`${BASE_URL}/api/folders/${folderId}/monitored`, {
+export function triggerSync(): Promise<{ message: string }> {
+  return apiRequest<{ message: string }>("/api/dashboard/sync", { method: "POST" });
+}
+
+export async function getEmailAccounts(teamId: string): Promise<EmailAccount[]> {
+  const body = await apiRequest<unknown>(`/api/email-accounts?teamId=${encodeURIComponent(teamId)}`, {
+    scope: "team",
+    teamId,
+  });
+  return unwrapList<EmailAccount>(body, "emailAccounts", "accounts");
+}
+
+export function getEmailAccount(accountId: string, teamId: string): Promise<EmailAccount> {
+  return apiRequest<EmailAccount>(`/api/email-accounts/${accountId}`, { scope: "team", teamId });
+}
+
+export async function getEmailAccountFolders(
+  accountId: string,
+  teamId: string,
+): Promise<{ folders: EmailFolder[] }> {
+  const body = await apiRequest<unknown>(`/api/email-accounts/${accountId}/folders`, {
+    scope: "team",
+    teamId,
+  });
+  return { folders: unwrapList<EmailFolder>(body, "folders", "data") };
+}
+
+export function setFolderMonitored(
+  folderId: string,
+  monitored: boolean | null,
+  teamId: string,
+): Promise<{ folder: EmailFolder }> {
+  return apiRequest<{ folder: EmailFolder }>(`/api/folders/${folderId}/monitored`, {
     method: "PATCH",
-    credentials: "include",
-    headers: { "Content-Type": "application/json", "x-org-id": orgId },
-    body: JSON.stringify({ monitored }),
+    scope: "team",
+    teamId,
+    body: { monitored },
   });
-  if (!response.ok) throw await parseHttpError(response, "Failed to update folder");
-  return response.json();
 }
 
-export async function getRules(orgId: string): Promise<Rule[]> {
-  const url = new URL(`${BASE_URL}/api/rules`);
-  url.searchParams.set("orgId", orgId);
-  const response = await fetch(url.toString(), { credentials: "include" });
-  if (!response.ok) throw await parseHttpError(response, "Failed to fetch rules");
-  return unwrapList<Rule>(await response.json(), "rules", "data");
+export async function getRules(teamId: string): Promise<Rule[]> {
+  const body = await apiRequest<unknown>(`/api/rules?teamId=${encodeURIComponent(teamId)}`, {
+    scope: "team",
+    teamId,
+  });
+  return unwrapList<Rule>(body, "rules", "data");
 }
 
-export async function createRule(payload: CreateRulePayload): Promise<{ rule: Rule }> {
-  const response = await fetch(`${BASE_URL}/api/rules`, {
+export function createRule(payload: CreateRulePayload & { teamId: string }): Promise<{ rule: Rule }> {
+  const { teamId, ...rest } = payload;
+  return apiRequest<{ rule: Rule }>("/api/rules", {
     method: "POST",
-    credentials: "include",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
+    scope: "team",
+    teamId,
+    body: rest,
   });
-  if (!response.ok) throw await parseHttpError(response, "Failed to create rule");
-  return response.json();
 }
 
-export async function listWorkspaces(): Promise<{ workspaces: WorkspaceSummary[] }> {
-  const response = await fetch(`${BASE_URL}/api/workspaces`, { credentials: "include" });
-  if (!response.ok) throw await parseHttpError(response, "Failed to fetch workspaces");
-  return response.json();
+export function listWorkspaces(): Promise<{ workspaces: WorkspaceSummary[] }> {
+  return apiRequest<{ workspaces: WorkspaceSummary[] }>("/api/workspaces");
 }
 
-export async function createWorkspace(name: string): Promise<WorkspaceSummary> {
-  const response = await fetch(`${BASE_URL}/api/workspaces`, {
-    method: "POST",
-    credentials: "include",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ name }),
-  });
-  if (!response.ok) throw await parseHttpError(response, "Failed to create workspace");
-  return response.json();
+export function createWorkspace(name: string): Promise<WorkspaceSummary> {
+  return apiRequest<WorkspaceSummary>("/api/workspaces", { method: "POST", body: { name } });
 }
 
 export function getCurrentWorkspace(): Promise<WorkspaceDetail> {
-  return workspaceRequest<WorkspaceDetail>("/api/workspaces/current");
+  return apiRequest<WorkspaceDetail>("/api/workspaces/current", { scope: "workspace" });
 }
 
 export function updateCurrentWorkspace(name: string): Promise<WorkspaceDetail> {
-  return workspaceRequest<WorkspaceDetail>("/api/workspaces/current", { method: "PATCH", body: { name } });
+  return apiRequest<WorkspaceDetail>("/api/workspaces/current", {
+    method: "PATCH",
+    scope: "workspace",
+    body: { name },
+  });
 }
 
 export function listWorkspaceMembers(): Promise<{ members: WorkspaceMember[] }> {
-  return workspaceRequest<{ members: WorkspaceMember[] }>("/api/workspaces/current/members");
+  return apiRequest<{ members: WorkspaceMember[] }>("/api/workspaces/current/members", {
+    scope: "workspace",
+  });
 }
 
-export function addWorkspaceMember(userId: string, role?: string): Promise<WorkspaceMember> {
-  return workspaceRequest<WorkspaceMember>("/api/workspaces/current/members", { method: "POST", body: { userId, role } });
+export function addWorkspaceMember(
+  userId: string,
+  role?: AssignableWorkspaceRole,
+): Promise<WorkspaceMember> {
+  return apiRequest<WorkspaceMember>("/api/workspaces/current/members", {
+    method: "POST",
+    scope: "workspace",
+    body: { userId, role },
+  });
 }
 
-export function updateWorkspaceMemberRole(memberId: string, role: string): Promise<WorkspaceMember> {
-  return workspaceRequest<WorkspaceMember>(`/api/workspaces/current/members/${memberId}`, { method: "PATCH", body: { role } });
+export function updateWorkspaceMemberRole(
+  memberId: string,
+  role: AssignableWorkspaceRole,
+): Promise<WorkspaceMember> {
+  return apiRequest<WorkspaceMember>(`/api/workspaces/current/members/${memberId}`, {
+    method: "PATCH",
+    scope: "workspace",
+    body: { role },
+  });
 }
 
 export function removeWorkspaceMember(memberId: string): Promise<void> {
-  return workspaceRequest<void>(`/api/workspaces/current/members/${memberId}`, { method: "DELETE" });
-}
-
-export async function listPlans(): Promise<{ plans: Plan[] }> {
-  const response = await fetch(`${BASE_URL}/api/plans`, { cache: "no-store" });
-  if (!response.ok) throw await parseHttpError(response, "Failed to fetch plans");
-  return response.json();
-}
-
-export function getEntitlements(): Promise<Entitlements> {
-  return workspaceRequest<Entitlements>("/api/entitlements");
-}
-
-export async function adminListPlans(): Promise<{ plans: Plan[] }> {
-  const response = await fetch(`${BASE_URL}/api/admin/plans`, { credentials: "include" });
-  if (!response.ok) throw await parseHttpError(response, "Failed to fetch admin plans");
-  return response.json();
-}
-
-export async function adminCreatePlan(payload: { slug: string; name: string; description?: string; sortOrder?: number; isActive?: boolean }): Promise<Plan> {
-  const response = await fetch(`${BASE_URL}/api/admin/plans`, {
-    method: "POST",
-    credentials: "include",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
+  return apiRequest<void>(`/api/workspaces/current/members/${memberId}`, {
+    method: "DELETE",
+    scope: "workspace",
   });
-  if (!response.ok) throw await parseHttpError(response, "Failed to create plan");
-  return response.json();
 }
 
-export async function adminUpdatePlan(planId: string, patch: Partial<{ name: string; description: string; sortOrder: number; isActive: boolean }>): Promise<Plan> {
-  const response = await fetch(`${BASE_URL}/api/admin/plans/${planId}`, {
-    method: "PATCH",
-    credentials: "include",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(patch),
-  });
-  if (!response.ok) throw await parseHttpError(response, "Failed to update plan");
-  return response.json();
-}
-
-export async function adminDeletePlan(planId: string): Promise<void> {
-  const response = await fetch(`${BASE_URL}/api/admin/plans/${planId}`, { method: "DELETE", credentials: "include" });
-  if (!response.ok) throw await parseHttpError(response, "Failed to delete plan");
-}
-
-export async function adminPutPlanFeatures(planId: string, features: Record<string, string | number | boolean | null>): Promise<Plan> {
-  const response = await fetch(`${BASE_URL}/api/admin/plans/${planId}/features`, {
-    method: "PUT",
-    credentials: "include",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ features }),
-  });
-  if (!response.ok) throw await parseHttpError(response, "Failed to update features");
-  return response.json();
-}
-
-export async function adminCreatePrice(planId: string, payload: { stripePriceId: string; interval: PriceInterval; unitAmount: number; currency?: string }): Promise<PlanPrice> {
-  const response = await fetch(`${BASE_URL}/api/admin/plans/${planId}/prices`, {
-    method: "POST",
-    credentials: "include",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
-  });
-  if (!response.ok) throw await parseHttpError(response, "Failed to create price");
-  return response.json();
-}
-
-export async function adminUpdatePrice(planId: string, priceId: string, patch: Partial<{ stripePriceId: string; unitAmount: number; currency: string }>): Promise<PlanPrice> {
-  const response = await fetch(`${BASE_URL}/api/admin/plans/${planId}/prices/${priceId}`, {
-    method: "PATCH",
-    credentials: "include",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(patch),
-  });
-  if (!response.ok) throw await parseHttpError(response, "Failed to update price");
-  return response.json();
-}
-
-export async function adminDeletePrice(planId: string, priceId: string): Promise<void> {
-  const response = await fetch(`${BASE_URL}/api/admin/plans/${planId}/prices/${priceId}`, { method: "DELETE", credentials: "include" });
-  if (!response.ok) throw await parseHttpError(response, "Failed to delete price");
+export async function getEntitlements(): Promise<Entitlements> {
+  const raw = await apiRequest<Entitlements & { usage?: Partial<Entitlements["usage"]> & { orgs_used?: number } }>(
+    "/api/entitlements",
+    { scope: "workspace" },
+  );
+  return {
+    ...raw,
+    usage: {
+      workspaces_used: raw.usage?.workspaces_used ?? 0,
+      teams_used: raw.usage?.teams_used ?? raw.usage?.orgs_used ?? 0,
+      mailboxes_used: raw.usage?.mailboxes_used ?? 0,
+    },
+  };
 }

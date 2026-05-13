@@ -17,14 +17,14 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import type {
-  OrgDashboardThread,
-  OrgThreadStatus,
+  TeamDashboardThread,
+  TeamThreadStatus,
 } from "@/types/dashboard";
 
 const FROM_PLACEHOLDER = "(unknown sender)";
 const OWNER_PLACEHOLDER = "Unassigned";
 
-const STATUS_BADGE_CLASSES: Record<OrgThreadStatus, string> = {
+const STATUS_BADGE_CLASSES: Record<TeamThreadStatus, string> = {
   Overdue:
     "bg-red-600 text-white border-transparent shadow-sm hover:bg-red-600/90",
   "At Risk":
@@ -32,13 +32,13 @@ const STATUS_BADGE_CLASSES: Record<OrgThreadStatus, string> = {
   Open: "bg-muted text-foreground border border-border",
 };
 
-const STATUS_ICONS: Record<OrgThreadStatus, LucideIcon> = {
+const STATUS_ICONS: Record<TeamThreadStatus, LucideIcon> = {
   Overdue: ShieldAlert,
   "At Risk": AlertTriangle,
   Open: Circle,
 };
 
-const STATUS_COUNTDOWN_CLASSES: Record<OrgThreadStatus, string> = {
+const STATUS_COUNTDOWN_CLASSES: Record<TeamThreadStatus, string> = {
   Overdue: "text-red-600",
   "At Risk": "text-amber-700",
   Open: "text-muted-foreground",
@@ -57,7 +57,7 @@ function abbreviateOwner(name: string | null): string {
   return `${parts[0][0]}. ${parts[parts.length - 1]}`;
 }
 
-export function OrgThreadTable({ threads }: { threads: OrgDashboardThread[] }) {
+export function TeamThreadTable({ threads }: { threads: TeamDashboardThread[] }) {
   return (
     <Card>
       <CardHeader>
@@ -95,7 +95,7 @@ function EmptyThreadsState() {
   );
 }
 
-function ThreadRow({ thread }: { thread: OrgDashboardThread }) {
+function ThreadRow({ thread }: { thread: TeamDashboardThread }) {
   const StatusIcon = STATUS_ICONS[thread.status];
   return (
     <li className="px-6 py-4 transition-colors hover:bg-accent/30">
@@ -125,7 +125,7 @@ function ThreadRow({ thread }: { thread: OrgDashboardThread }) {
   );
 }
 
-function ThreadOriginBlock({ thread }: { thread: OrgDashboardThread }) {
+function ThreadOriginBlock({ thread }: { thread: TeamDashboardThread }) {
   return (
     <div className="min-w-0 space-y-0.5">
       <p
@@ -152,7 +152,7 @@ function ThreadOriginBlock({ thread }: { thread: OrgDashboardThread }) {
   );
 }
 
-function ThreadAssignmentBlock({ thread }: { thread: OrgDashboardThread }) {
+function ThreadAssignmentBlock({ thread }: { thread: TeamDashboardThread }) {
   return (
     <div className="flex shrink-0 flex-col gap-0.5 sm:items-end">
       <p

@@ -20,7 +20,7 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { OrgTabNav } from "@/components/org-tab-nav";
+import { TeamTabNav } from "@/components/team-tab-nav";
 import { RuleEditor } from "@/components/rule-editor";
 import { getEmailAccounts, getRules } from "@/services/api";
 import type { EmailAccount } from "@/types/email-account";
@@ -31,15 +31,15 @@ import {
 } from "@/types/rule";
 
 const scopeIcon: Record<ScopeKind, typeof Building2> = {
-  ORGANIZATION: Building2,
+  TEAM: Building2,
   ACCOUNT: Mail,
   FOLDER: Folder,
 };
 
-export default function OrgRulesPage() {
-  const params = useParams<{ id: string }>();
+export default function TeamRulesPage() {
+  const params = useParams<{ teamId: string }>();
   const router = useRouter();
-  const orgId = params?.id ?? "";
+  const teamId = params?.teamId ?? "";
 
   const [rules, setRules] = useState<Rule[] | null>(null);
   const [accounts, setAccounts] = useState<EmailAccount[]>([]);
@@ -48,14 +48,14 @@ export default function OrgRulesPage() {
   const [editorOpen, setEditorOpen] = useState(false);
 
   useEffect(() => {
-    if (!orgId) return;
+    if (!teamId) return;
     let cancelled = false;
 
     const load = async () => {
       try {
         const [rulesRes, accountsRes] = await Promise.all([
-          getRules(orgId),
-          getEmailAccounts(orgId),
+          getRules(teamId),
+          getEmailAccounts(teamId),
         ]);
         if (cancelled) return;
         setRules(rulesRes);
@@ -73,7 +73,7 @@ export default function OrgRulesPage() {
     return () => {
       cancelled = true;
     };
-  }, [orgId]);
+  }, [teamId]);
 
   function handleCreated(rule: Rule) {
     setRules((prev) => (prev ? [rule, ...prev] : [rule]));
@@ -98,8 +98,8 @@ export default function OrgRulesPage() {
         </div>
       </div>
 
-      <OrgTabNav
-        orgId={orgId}
+      <TeamTabNav
+        teamId={teamId}
         rightSlot={
           <Button size="sm" onClick={() => setEditorOpen(true)}>
             <Plus className="mr-1.5 h-3.5 w-3.5" />
@@ -142,7 +142,7 @@ export default function OrgRulesPage() {
             <CardTitle className="text-base">Active rules</CardTitle>
             <CardDescription>
               Rules are matched per thread by evaluation type. Folder beats
-              account beats organization for the same type.
+              account beats team for the same type.
             </CardDescription>
           </CardHeader>
           <CardContent className="px-0">
@@ -155,7 +155,7 @@ export default function OrgRulesPage() {
         open={editorOpen}
         onOpenChange={setEditorOpen}
         emailAccounts={accounts}
-        orgId={orgId}
+        teamId={teamId}
         onCreated={handleCreated}
       />
     </div>
@@ -232,7 +232,7 @@ function ScopeLabel({
   rule: Rule;
   accounts: EmailAccount[];
 }) {
-  if (rule.scopeKind === "ORGANIZATION") return <span>Org-wide</span>;
+  if (rule.scopeKind === "TEAM") return <span>Org-wide</span>;
 
   const account =
     rule.emailAccount ??

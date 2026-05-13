@@ -15,9 +15,9 @@ import {
 } from "@/components/ui/card";
 import { HelpTooltip } from "@/components/ui/help-tooltip";
 import { cn } from "@/lib/utils";
-import type { OrgDashboardKpis } from "@/types/dashboard";
+import type { TeamDashboardKpis } from "@/types/dashboard";
 
-export function NeedsAttentionKpis({ kpis }: { kpis: OrgDashboardKpis }) {
+export function NeedsAttentionKpis({ kpis }: { kpis: TeamDashboardKpis }) {
   return (
     <section
       aria-label="Needs attention"

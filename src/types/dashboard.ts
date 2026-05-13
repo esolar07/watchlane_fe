@@ -6,8 +6,8 @@ export interface DashboardSummary {
 }
 
 export interface CoverageMetrics {
-  organizationId: string;
-  organizationName: string;
+  teamId: string;
+  teamName: string;
   slaTarget: number;
   compliancePercent: number;
   totalInbound: number;
@@ -19,8 +19,6 @@ export interface CoverageMetrics {
   openCount?: number;
   overdueCount?: number;
 }
-
-// ── Activity types (returned in single-org coverage detail) ──
 
 interface BaseActivity {
   type: string;
@@ -91,8 +89,6 @@ export interface OpenThread {
   isAtRisk: boolean;
 }
 
-// ── Operational dashboard (real-time snapshot) ──
-
 export interface OperationalDashboard {
   slaTarget: number;
   lastSyncAt: string;
@@ -104,8 +100,6 @@ export interface OperationalDashboard {
   atRiskThreads: OpenThread[];
   recentActivity: ActivityItem[];
 }
-
-// ── Performance dashboard (historical compliance) ──
 
 export interface LateResponseThread {
   threadId: string;
@@ -119,13 +113,11 @@ export interface LateResponseThread {
   minutesOverdue: number;
 }
 
-// ── Per-org consolidated dashboard ──
+export type TeamThreadStatus = "Overdue" | "At Risk" | "Open";
 
-export type OrgThreadStatus = "Overdue" | "At Risk" | "Open";
-
-export interface OrgDashboardThread {
+export interface TeamDashboardThread {
   threadId: string;
-  status: OrgThreadStatus;
+  status: TeamThreadStatus;
   subject: string;
   from: string | null;
   owner: string | null;
@@ -137,7 +129,7 @@ export interface OrgDashboardThread {
   slaCountdownFormatted: string;
 }
 
-export interface OrgDashboardKpis {
+export interface TeamDashboardKpis {
   openThreads: number;
   overdue: number;
   atRisk: number;
@@ -145,28 +137,26 @@ export interface OrgDashboardKpis {
   oldestGapFormatted: string;
 }
 
-export interface OrgDashboardPerformance {
+export interface TeamDashboardPerformance {
   slaCompliancePercent: number;
   avgResponseMinutes: number;
   avgResponseFormatted: string;
 }
 
-export interface OrgDashboard {
-  organizationId: string;
-  organizationName: string;
+export interface TeamDashboard {
+  teamId: string;
+  teamName: string;
   slaTarget: number;
   lastSyncAt: string;
-  kpis: OrgDashboardKpis;
-  threads: OrgDashboardThread[];
+  kpis: TeamDashboardKpis;
+  threads: TeamDashboardThread[];
   activity: ActivityItem[];
-  performance: OrgDashboardPerformance;
+  performance: TeamDashboardPerformance;
 }
 
-// ── Cross-org aggregate dashboard ──
-
-export interface AggregateImpactedOrg {
-  organizationId: string;
-  organizationName: string;
+export interface AggregateImpactedTeam {
+  teamId: string;
+  teamName: string;
   overdueCount: number;
 }
 
@@ -182,8 +172,8 @@ export interface AggregateDashboard {
   oldestGapMinutes: number;
   oldestGapFormatted: string;
   slaCompliancePercent: number;
-  totalOrgs: number;
-  impactedOrgs: AggregateImpactedOrg[];
+  totalTeams: number;
+  impactedTeams: AggregateImpactedTeam[];
 }
 
 export interface PerformanceDashboard {
@@ -198,4 +188,3 @@ export interface PerformanceDashboard {
   avgResponseMinutes: number;
   lateResponseThreads: LateResponseThread[];
 }
-

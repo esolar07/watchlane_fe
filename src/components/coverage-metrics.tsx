@@ -428,7 +428,7 @@ export function CoverageSkeleton() {
   );
 }
 
-// ── Inline metric (for org rows) ──
+// ── Inline metric (for team rows) ──
 
 export function Metric({
   label,

@@ -12,7 +12,7 @@ function MailboxRedirect() {
 
   useEffect(() => {
     const timer = setTimeout(() => {
-      router.replace("/organizations");
+      router.replace("/teams");
     }, 2000);
     return () => clearTimeout(timer);
   }, [router]);
@@ -27,7 +27,7 @@ function MailboxRedirect() {
           <div className="text-center">
             <h2 className="text-lg font-semibold">Mailbox connected</h2>
             <p className="mt-1 text-sm text-muted-foreground">
-              Redirecting to your organizations...
+              Redirecting to your teams...
             </p>
           </div>
         </>
@@ -35,7 +35,7 @@ function MailboxRedirect() {
         <div className="text-center">
           <h2 className="text-lg font-semibold">Redirecting...</h2>
           <p className="mt-1 text-sm text-muted-foreground">
-            Taking you to your organizations.
+            Taking you to your teams.
           </p>
         </div>
       )}

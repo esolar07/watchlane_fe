@@ -5,7 +5,7 @@ import { getPerformanceDashboard } from "@/services/api";
 import type { PerformanceDashboard } from "@/types/dashboard";
 
 interface UsePerformanceDashboardArgs {
-  orgId: string;
+  teamId: string;
   startDate: string;
   endDate: string;
   repId?: string;
@@ -25,15 +25,15 @@ export function usePerformanceDashboard(
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const { orgId, startDate, endDate, repId } = args;
+  const { teamId, startDate, endDate, repId } = args;
 
   const fetchData = useCallback(async () => {
-    if (!orgId) return;
+    if (!teamId) return;
     setIsLoading(true);
     setError(null);
     try {
       setData(
-        await getPerformanceDashboard({ orgId, startDate, endDate, repId }),
+        await getPerformanceDashboard({ teamId, startDate, endDate, repId }),
       );
     } catch (err) {
       setError(
@@ -45,7 +45,7 @@ export function usePerformanceDashboard(
     } finally {
       setIsLoading(false);
     }
-  }, [orgId, startDate, endDate, repId]);
+  }, [teamId, startDate, endDate, repId]);
 
   useEffect(() => {
     fetchData();

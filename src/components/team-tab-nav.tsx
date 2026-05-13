@@ -2,29 +2,30 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Activity, BarChart3, Settings, ShieldAlert } from "lucide-react";
+import { Activity, BarChart3, Mail, Settings, ShieldAlert } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const tabs = [
   { label: "Operational", href: "operational", icon: Activity },
   { label: "Performance", href: "performance", icon: BarChart3 },
   { label: "Rules", href: "rules", icon: ShieldAlert },
+  { label: "Email accounts", href: "email-accounts", icon: Mail },
   { label: "Settings", href: "", icon: Settings },
 ] as const;
 
-export function OrgTabNav({
-  orgId,
+export function TeamTabNav({
+  teamId,
   rightSlot,
 }: {
-  orgId: string;
+  teamId: string;
   rightSlot?: React.ReactNode;
 }) {
   const pathname = usePathname();
-  const base = `/organizations/${orgId}`;
+  const base = `/teams/${teamId}`;
 
   return (
     <div className="flex items-end justify-between border-b">
-      <nav className="flex gap-1" aria-label="Organization navigation">
+      <nav className="flex gap-1" aria-label="Team navigation">
         {tabs.map((tab) => {
           const href = tab.href ? `${base}/${tab.href}` : base;
           const isActive = tab.href

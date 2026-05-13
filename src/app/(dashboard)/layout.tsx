@@ -14,22 +14,20 @@ export default function DashboardLayout({
   const router = useRouter();
 
   useEffect(() => {
-    if (!isLoading && !isAuthenticated) {
-      router.push("/login");
-    }
+    if (isLoading) return;
+    if (!isAuthenticated) router.push("/login");
   }, [isAuthenticated, isLoading, router]);
 
-  if (isLoading) {
-    return (
-      <div className="flex h-screen items-center justify-center">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-      </div>
-    );
-  }
-
-  if (!isAuthenticated) {
-    return null;
-  }
+  if (isLoading) return <FullScreenSpinner />;
+  if (!isAuthenticated) return null;
 
   return <AppShell>{children}</AppShell>;
+}
+
+function FullScreenSpinner() {
+  return (
+    <div className="flex h-screen items-center justify-center">
+      <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+    </div>
+  );
 }

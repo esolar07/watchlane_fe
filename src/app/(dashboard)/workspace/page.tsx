@@ -29,9 +29,13 @@ import {
   updateWorkspaceMemberRole,
   removeWorkspaceMember,
 } from "@/services/api";
-import type { WorkspaceDetail, WorkspaceMember } from "@/types/workspace";
+import type {
+  AssignableWorkspaceRole,
+  WorkspaceDetail,
+  WorkspaceMember,
+} from "@/types/workspace";
 
-const ASSIGNABLE_ROLES = ["OWNER", "ADMIN", "MEMBER"] as const;
+const ASSIGNABLE_WORKSPACE_ROLES: AssignableWorkspaceRole[] = ["ADMIN", "MEMBER"];
 
 export default function WorkspacePage() {
   const { activeWorkspace, refetch: refetchWorkspaces } = useWorkspace();
@@ -172,7 +176,7 @@ function LoadingState() {
 interface MembersTableProps {
   members: WorkspaceMember[];
   canManage: boolean;
-  onRoleChange: (memberId: string, role: string) => Promise<void>;
+  onRoleChange: (memberId: string, role: AssignableWorkspaceRole) => Promise<void>;
   onRemove: (memberId: string) => Promise<void>;
 }
 
@@ -192,13 +196,15 @@ function MembersTable({ members, canManage, onRoleChange, onRemove }: MembersTab
             {canManage ? (
               <Select
                 value={member.role}
-                onValueChange={(nextRole) => onRoleChange(member.userId, nextRole)}
+                onValueChange={(nextRole) =>
+                  onRoleChange(member.userId, nextRole as AssignableWorkspaceRole)
+                }
               >
                 <SelectTrigger className="h-8 w-[120px] text-xs">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {ASSIGNABLE_ROLES.map((role) => (
+                  {ASSIGNABLE_WORKSPACE_ROLES.map((role) => (
                     <SelectItem key={role} value={role}>{role}</SelectItem>
                   ))}
                 </SelectContent>
@@ -229,7 +235,7 @@ interface AddMemberFormProps {
 
 function AddMemberForm({ onAdded }: AddMemberFormProps) {
   const [userId, setUserId] = useState("");
-  const [role, setRole] = useState<string>("MEMBER");
+  const [role, setRole] = useState<AssignableWorkspaceRole>("MEMBER");
   const [submitting, setSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -260,12 +266,15 @@ function AddMemberForm({ onAdded }: AddMemberFormProps) {
           disabled={submitting}
           className="flex-1"
         />
-        <Select value={role} onValueChange={setRole}>
+        <Select
+          value={role}
+          onValueChange={(nextRole) => setRole(nextRole as AssignableWorkspaceRole)}
+        >
           <SelectTrigger className="sm:w-[140px]">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            {ASSIGNABLE_ROLES.map((roleOption) => (
+            {ASSIGNABLE_WORKSPACE_ROLES.map((roleOption) => (
               <SelectItem key={roleOption} value={roleOption}>{roleOption}</SelectItem>
             ))}
           </SelectContent>

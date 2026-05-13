@@ -3,6 +3,7 @@ export type ApiErrorCode =
   | "FEATURE_NOT_AVAILABLE"
   | "VALIDATION_ERROR"
   | "NOT_AUTHORIZED"
+  | "ONBOARDING_REQUIRED"
   | "WORKSPACE_REQUIRED"
   | "UNKNOWN";
 
@@ -11,8 +12,8 @@ export interface ApiErrorBody {
   code?: ApiErrorCode;
   feature?: string;
   limit?: number;
-  currentCount?: number;
-  planSlug?: string;
+  current?: number;
+  plan?: string;
   workspaces?: { id: string; name: string }[];
 }
 
@@ -39,7 +40,14 @@ function isApiErrorBody(body: unknown): body is ApiErrorBody {
   return Boolean(body) && typeof body === "object";
 }
 
-export function isUpgradeError(thrown: unknown): thrown is ApiError {
-  if (!(thrown instanceof ApiError)) return false;
-  return thrown.code === "LIMIT_REACHED" || thrown.code === "FEATURE_NOT_AVAILABLE";
+export function isLimitReachedError(thrown: unknown): thrown is ApiError {
+  return thrown instanceof ApiError && thrown.code === "LIMIT_REACHED";
+}
+
+export function isFeatureUnavailableError(thrown: unknown): thrown is ApiError {
+  return thrown instanceof ApiError && thrown.code === "FEATURE_NOT_AVAILABLE";
+}
+
+export function isOnboardingRequiredError(thrown: unknown): thrown is ApiError {
+  return thrown instanceof ApiError && thrown.code === "ONBOARDING_REQUIRED";
 }

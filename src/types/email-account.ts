@@ -2,7 +2,7 @@ export type EmailProvider = "microsoft" | "google";
 
 export interface EmailAccount {
   id: string;
-  organizationId: string;
+  teamId: string;
   provider: EmailProvider;
   emailAddress: string;
   displayName?: string;

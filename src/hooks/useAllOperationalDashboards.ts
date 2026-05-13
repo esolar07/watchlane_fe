@@ -5,13 +5,13 @@ import { getOperationalDashboard } from "@/services/api";
 import type { OperationalDashboard } from "@/types/dashboard";
 
 export interface OperationalEntry {
-  orgId: string;
-  orgName: string;
+  teamId: string;
+  teamName: string;
   data: OperationalDashboard | null;
   error: string | null;
 }
 
-interface OrgRef {
+interface TeamRef {
   id: string;
   name: string;
 }
@@ -22,33 +22,33 @@ interface Result {
   refetch: () => void;
 }
 
-async function fetchOperationalEntry(org: OrgRef): Promise<OperationalEntry> {
+async function fetchOperationalEntry(team: TeamRef): Promise<OperationalEntry> {
   try {
-    const data = await getOperationalDashboard({ orgId: org.id });
-    return { orgId: org.id, orgName: org.name, data, error: null };
+    const data = await getOperationalDashboard({ teamId: team.id });
+    return { teamId: team.id, teamName: team.name, data, error: null };
   } catch (err) {
     return {
-      orgId: org.id,
-      orgName: org.name,
+      teamId: team.id,
+      teamName: team.name,
       data: null,
       error: err instanceof Error ? err.message : "Failed to load",
     };
   }
 }
 
-export function useAllOperationalDashboards(orgs: OrgRef[]): Result {
+export function useAllOperationalDashboards(teams: TeamRef[]): Result {
   const [entries, setEntries] = useState<OperationalEntry[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  const orgKey = orgs.map((o) => o.id).join("|");
+  const teamKey = teams.map((o) => o.id).join("|");
 
   const fetchAll = useCallback(async () => {
     setIsLoading(true);
-    const results = await Promise.all(orgs.map(fetchOperationalEntry));
+    const results = await Promise.all(teams.map(fetchOperationalEntry));
     setEntries(results);
     setIsLoading(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [orgKey]);
+  }, [teamKey]);
 
   useEffect(() => {
     fetchAll();

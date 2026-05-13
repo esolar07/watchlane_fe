@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import {
   Card,
   CardContent,
@@ -8,11 +7,11 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { LimitBadge } from "@/components/LimitBadge";
 import { useWorkspace } from "@/hooks/useWorkspace";
 import { useEntitlements } from "@/hooks/useEntitlements";
+import { useMe } from "@/hooks/useMe";
 import { humanizeFeatureKey } from "@/types/plan";
 import type { BooleanFeatureKey, LimitFeatureKey } from "@/types/entitlements";
 
@@ -25,6 +24,7 @@ const BOOLEAN_FEATURE_KEYS: BooleanFeatureKey[] = [
 export default function SettingsPage() {
   const { activeWorkspace } = useWorkspace();
   const { entitlements, isLoading } = useEntitlements();
+  const { user } = useMe();
 
   if (isLoading && !entitlements) {
     return (
@@ -57,25 +57,20 @@ export default function SettingsPage() {
       </Card>
 
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0">
-          <div>
-            <CardTitle>Plan</CardTitle>
-            <CardDescription>Your current subscription plan.</CardDescription>
-          </div>
-          <Link href="/pricing">
-            <Button variant="outline" size="sm">Manage subscription</Button>
-          </Link>
+        <CardHeader>
+          <CardTitle>Plan</CardTitle>
+          <CardDescription>Your current plan.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex items-center gap-2">
-            <span className="text-lg font-semibold">{entitlements?.plan.name ?? "—"}</span>
-            {entitlements && (
-              <Badge variant="outline" className="text-xs">{entitlements.plan.slug}</Badge>
+            <span className="text-lg font-semibold">{user?.currentPlan.name ?? "—"}</span>
+            {user && (
+              <Badge variant="outline" className="text-xs">{user.currentPlan.slug}</Badge>
             )}
           </div>
           <div className="grid gap-2 sm:grid-cols-3">
             <UsageRow label="Mailboxes" feature="mailbox_limit" />
-            <UsageRow label="Organizations" feature="org_limit" />
+            <UsageRow label="Teams" feature="team_limit" />
             <UsageRow label="History" feature="history_days" />
           </div>
         </CardContent>
