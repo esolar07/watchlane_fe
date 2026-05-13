@@ -10,6 +10,7 @@ import {
   ChevronRight,
   Clock,
   Inbox,
+  Lock,
   RefreshCw,
   ShieldAlert,
   Timer,
@@ -22,12 +23,18 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { HelpTooltip } from "@/components/ui/help-tooltip";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { getTeams } from "@/services/api";
 import { useAggregateDashboard } from "@/hooks/useAggregateDashboard";
 import {
   useAllOperationalDashboards,
   type OperationalEntry,
 } from "@/hooks/useAllOperationalDashboards";
+import { useEntitlements } from "@/hooks/useEntitlements";
 import { Metric, complianceColor } from "@/components/coverage-metrics";
 import { SnapshotBreakdown } from "@/components/snapshot-breakdown";
 import { cn, formatMinutes } from "@/lib/utils";
@@ -36,11 +43,11 @@ import type { Team } from "@/types/team";
 
 type DatePreset = "today" | "7d" | "30d" | "90d";
 
-const presets: { value: DatePreset; label: string }[] = [
-  { value: "today", label: "Today" },
-  { value: "7d", label: "7 days" },
-  { value: "30d", label: "30 days" },
-  { value: "90d", label: "90 days" },
+const presets: { value: DatePreset; label: string; requiredDays: number }[] = [
+  { value: "today", label: "Today", requiredDays: 1 },
+  { value: "7d", label: "7 days", requiredDays: 7 },
+  { value: "30d", label: "30 days", requiredDays: 30 },
+  { value: "90d", label: "90 days", requiredDays: 90 },
 ];
 
 function getDateRange(preset: DatePreset) {
@@ -56,10 +63,12 @@ function getDateRange(preset: DatePreset) {
 
 export default function DashboardPage() {
   const [teams, setTeams] = useState<{ id: string; name: string }[]>([]);
+  const [teamsLoading, setTeamsLoading] = useState(true);
   useEffect(() => {
     getTeams()
       .then((rows) => setTeams(rows.map((row) => ({ id: row.id, name: row.name }))))
-      .catch(() => setTeams([]));
+      .catch(() => setTeams([]))
+      .finally(() => setTeamsLoading(false));
   }, []);
   const [datePreset, setDatePreset] = useState<DatePreset>("7d");
   const { startDate, endDate } = useMemo(
@@ -69,6 +78,8 @@ export default function DashboardPage() {
 
   const aggregate = useAggregateDashboard({ startDate, endDate });
   const perTeam = useAllOperationalDashboards(teams);
+  const { entitlements } = useEntitlements();
+  const historyDays = entitlements?.features.history_days ?? null;
 
   const isRefreshing = aggregate.isLoading || perTeam.isLoading;
 
@@ -83,12 +94,12 @@ export default function DashboardPage() {
         onRefresh={refetchAll}
         isRefreshing={isRefreshing}
       />
-      {teams.length === 0 ? (
+      {teamsLoading || (aggregate.isLoading && !aggregate.data) ? (
+        <LoadingState />
+      ) : teams.length === 0 ? (
         <EmptyOrgsState />
       ) : aggregate.error ? (
         <ErrorBanner message={aggregate.error} />
-      ) : aggregate.isLoading && !aggregate.data ? (
-        <LoadingState />
       ) : aggregate.data ? (
         <>
           <SnapshotSection data={aggregate.data} />
@@ -96,6 +107,7 @@ export default function DashboardPage() {
             data={aggregate.data}
             datePreset={datePreset}
             onDatePresetChange={setDatePreset}
+            historyDays={historyDays}
           />
           {teams.length > 1 && (
             <TeamList teams={teams} entries={perTeam.entries} />
@@ -143,26 +155,59 @@ function DashboardHeader({
 function DateFilter({
   value,
   onChange,
+  historyDays,
 }: {
   value: DatePreset;
   onChange: (next: DatePreset) => void;
+  historyDays: number | null;
 }) {
   return (
     <div className="flex items-center rounded-lg border bg-card p-0.5">
-      {presets.map((p) => (
-        <Button
-          key={p.value}
-          variant={value === p.value ? "default" : "ghost"}
-          size="sm"
-          onClick={() => onChange(p.value)}
-          className={cn(
-            "h-8 rounded-md px-3 text-xs font-medium",
-            value !== p.value && "text-muted-foreground",
-          )}
-        >
-          {p.label}
-        </Button>
-      ))}
+      {presets.map((p) => {
+        const isLocked =
+          historyDays !== null && p.requiredDays > historyDays;
+        if (isLocked) {
+          return (
+            <Tooltip key={p.value}>
+              <TooltipTrigger asChild>
+                <span className="inline-flex">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    disabled
+                    className="h-8 rounded-md px-3 text-xs font-medium text-muted-foreground opacity-60"
+                  >
+                    {p.label}
+                    <Lock
+                      className="ml-1 h-3 w-3"
+                      aria-hidden="true"
+                    />
+                  </Button>
+                </span>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p className="text-xs">
+                  Upgrade your plan to access {p.label}.
+                </p>
+              </TooltipContent>
+            </Tooltip>
+          );
+        }
+        return (
+          <Button
+            key={p.value}
+            variant={value === p.value ? "default" : "ghost"}
+            size="sm"
+            onClick={() => onChange(p.value)}
+            className={cn(
+              "h-8 rounded-md px-3 text-xs font-medium",
+              value !== p.value && "text-muted-foreground",
+            )}
+          >
+            {p.label}
+          </Button>
+        );
+      })}
     </div>
   );
 }
@@ -279,10 +324,12 @@ function PeriodSection({
   data,
   datePreset,
   onDatePresetChange,
+  historyDays,
 }: {
   data: AggregateDashboard;
   datePreset: DatePreset;
   onDatePresetChange: (next: DatePreset) => void;
+  historyDays: number | null;
 }) {
   return (
     <section aria-label="Performance" className="space-y-4">
@@ -290,7 +337,11 @@ function PeriodSection({
         title="Performance"
         hint="Historical · changes with date filter"
         rightSlot={
-          <DateFilter value={datePreset} onChange={onDatePresetChange} />
+          <DateFilter
+            value={datePreset}
+            onChange={onDatePresetChange}
+            historyDays={historyDays}
+          />
         }
       />
       <div className="grid gap-4 md:grid-cols-2">
