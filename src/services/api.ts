@@ -142,6 +142,7 @@ export async function getAuthMailboxUrl(mailbox: string, teamId: string): Promis
 export async function getInviteUrl(inviteCode: string): Promise<{ url: string; teamName: string }> {
   const response = await fetch(
     `${BASE_URL}/api/auth/microsoft/invite-url?inviteCode=${encodeURIComponent(inviteCode)}`,
+    { credentials: "include" },
   );
   if (response.status === 404) throw new Error("Invalid or expired invite link");
   if (!response.ok) throw await parseHttpError(response, "Failed to get invite URL");
@@ -149,7 +150,7 @@ export async function getInviteUrl(inviteCode: string): Promise<{ url: string; t
 }
 
 export async function getAuthUrls(): Promise<{ microsoft: string; google: string }> {
-  const response = await fetch(`${BASE_URL}/api/auth/urls`);
+  const response = await fetch(`${BASE_URL}/api/auth/urls`, { credentials: "include" });
   if (!response.ok) throw await parseHttpError(response, "Failed to fetch auth URLs");
   return response.json();
 }
