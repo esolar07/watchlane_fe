@@ -2,14 +2,11 @@
 
 import { useEffect, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
-import { Building2, Plus, Crown, Shield, User, Mail, MailCheck, Clock } from "lucide-react";
+import { Building2, Plus, Mail, Clock, ChevronRight } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import {
   Card,
   CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -29,18 +26,22 @@ import { useEntitlements } from "@/hooks/useEntitlements";
 import { isLimitReachedError } from "@/lib/errors";
 import type { TeamDetail } from "@/types/team";
 
-const roleIcons: Record<string, typeof Crown> = {
-  OWNER: Crown,
-  ADMIN: Shield,
-  MEMBER: User,
-};
-
-function formatDate(dateString: string) {
-  return new Date(dateString).toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
+function formatRelativeTime(dateString: string): string {
+  const then = new Date(dateString).getTime();
+  if (Number.isNaN(then)) return "";
+  const seconds = Math.max(0, Math.floor((Date.now() - then) / 1000));
+  if (seconds < 60) return "just now";
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  if (days < 7) return `${days}d ago`;
+  const weeks = Math.floor(days / 7);
+  if (weeks < 5) return `${weeks}w ago`;
+  const months = Math.floor(days / 30);
+  if (months < 12) return `${months}mo ago`;
+  return `${Math.floor(days / 365)}y ago`;
 }
 
 function formatLimitReached(body: { feature?: string; limit?: number; current?: number }): string {
@@ -203,52 +204,40 @@ export default function TeamsPage() {
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {teams.map((team) => {
-          const RoleIcon = roleIcons[team.role] ?? User;
+          const memberCount = team.memberCount ?? team.members?.length;
+          const hasStats = Boolean(team.coverage) || Boolean(team.lastActivityAt);
+          const isConnecting = connectingTeamId === team.id;
           return (
-            <Card
-              key={team.id}
-              className="cursor-pointer transition-shadow hover:shadow-md"
-              onClick={() => router.push(`/teams/${team.id}`)}
-            >
-              <CardHeader className="flex flex-row items-start justify-between space-y-0">
+            <Card key={team.id} className="gap-0 py-5 transition-shadow hover:shadow-md">
+              <CardContent className="flex flex-col gap-4 px-5">
                 <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
-                    <Building2 className="h-5 w-5 text-primary" />
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border bg-muted text-sm font-semibold text-foreground">
+                    {team.name.charAt(0).toUpperCase()}
                   </div>
-                  <div>
-                    <CardTitle className="text-base">{team.name}</CardTitle>
-                    <CardDescription className="mt-0.5 text-xs">
-                      Created {formatDate(team.createdAt)}
-                    </CardDescription>
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-semibold leading-none">{team.name}</p>
+                    {typeof memberCount === "number" && (
+                      <p className="mt-1.5 text-xs text-muted-foreground">
+                        {memberCount} {memberCount === 1 ? "member" : "members"}
+                      </p>
+                    )}
                   </div>
                 </div>
-              </CardHeader>
-              <CardContent className="space-y-3 pt-0">
-                <div className="flex items-center justify-between">
-                  <span className="inline-flex items-center gap-1.5 rounded-full bg-muted px-2.5 py-0.5 text-xs font-medium text-muted-foreground">
-                    <RoleIcon className="h-3 w-3" />
-                    {team.role}
-                  </span>
-                </div>
+
                 {team.mailboxConnected ? (
-                  <div className="flex items-center gap-2 rounded-md border border-green-200 bg-green-50 px-3 py-2 dark:border-green-900/50 dark:bg-green-900/20">
-                    <MailCheck className="h-4 w-4 text-green-600 dark:text-green-400" />
-                    <span className="text-sm font-medium text-green-700 dark:text-green-400">
-                      Mailbox connected
-                    </span>
-                  </div>
+                  <span className="inline-flex items-center gap-1.5 text-xs font-medium text-green-600 dark:text-green-400">
+                    <span className="h-2 w-2 rounded-full bg-green-500" />
+                    Mailbox connected
+                  </span>
                 ) : mailboxLimitAvailable ? (
                   <Button
                     variant="outline"
                     size="sm"
                     className="w-full"
-                    disabled={connectingTeamId === team.id}
-                    onClick={(clickEvent) => {
-                      clickEvent.stopPropagation();
-                      handleConnectMailbox(team.id);
-                    }}
+                    disabled={isConnecting}
+                    onClick={() => handleConnectMailbox(team.id)}
                   >
-                    {connectingTeamId === team.id ? (
+                    {isConnecting ? (
                       <span className="flex items-center gap-2">
                         <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
                         Connecting...
@@ -260,7 +249,46 @@ export default function TeamsPage() {
                       </span>
                     )}
                   </Button>
-                ) : null}
+                ) : (
+                  <span className="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+                    <span className="h-2 w-2 rounded-full bg-muted-foreground/40" />
+                    Mailbox not connected
+                  </span>
+                )}
+
+                {hasStats && (
+                  <div className="grid grid-cols-2 gap-4 rounded-lg border bg-muted/30 px-4 py-3">
+                    {team.coverage && (
+                      <div className="min-w-0">
+                        <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+                          Coverage
+                        </p>
+                        <p className="mt-1 text-sm font-semibold">
+                          {team.coverage.covered}/{team.coverage.total}
+                        </p>
+                      </div>
+                    )}
+                    {team.lastActivityAt && (
+                      <div className="min-w-0">
+                        <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+                          Last activity
+                        </p>
+                        <p className="mt-1 text-sm font-semibold">
+                          {formatRelativeTime(team.lastActivityAt)}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                <Button
+                  variant="outline"
+                  className="w-full"
+                  onClick={() => router.push(`/teams/${team.id}`)}
+                >
+                  View team
+                  <ChevronRight className="ml-1 h-4 w-4" />
+                </Button>
               </CardContent>
             </Card>
           );

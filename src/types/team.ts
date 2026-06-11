@@ -24,10 +24,18 @@ export interface TeamMember {
   mailboxConnected: boolean;
 }
 
+export interface TeamCoverage {
+  covered: number;
+  total: number;
+}
+
 export interface TeamDetail extends Team {
   createdAt: string;
   inviteCode?: string;
   members?: TeamMember[];
+  memberCount?: number;
+  coverage?: TeamCoverage;
+  lastActivityAt?: string;
 }
 
 export interface CreateTeamPayload {
