@@ -36,6 +36,7 @@ import {
 } from "@/services/api";
 import type { TeamDetail } from "@/types/team";
 import { TeamTabNav } from "@/components/team-tab-nav";
+import { MailboxInvitePanel } from "@/components/MailboxInvitePanel";
 
 const roleIcons: Record<string, typeof Crown> = {
   OWNER: Crown,
@@ -428,6 +429,9 @@ export default function OrganizationSettingsPage() {
           </CardContent>
         </Card>
       )}
+
+      {/* Mailbox Invite Links — OWNER/ADMIN only */}
+      {canEdit && <MailboxInvitePanel teamId={teamId} />}
 
       {/* Invite Link Card — OWNER/ADMIN only */}
       {canEdit && inviteLink && (

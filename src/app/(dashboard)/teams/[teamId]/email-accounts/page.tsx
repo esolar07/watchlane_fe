@@ -14,16 +14,20 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { TeamTabNav } from "@/components/team-tab-nav";
-import { getEmailAccounts, getAuthMailboxUrl } from "@/services/api";
+import { getEmailAccounts, getAuthMailboxUrl, getTeam } from "@/services/api";
 import { useEntitlements } from "@/hooks/useEntitlements";
 import { isLimitReachedError } from "@/lib/errors";
+import { MailboxInvitePanel } from "@/components/MailboxInvitePanel";
 import type { EmailAccount } from "@/types/email-account";
+import type { TeamRole } from "@/types/team";
 
 export default function TeamEmailAccountsPage() {
   const params = useParams<{ teamId: string }>();
   const teamId = params?.teamId ?? "";
   const { isWithinLimit } = useEntitlements();
   const canConnect = isWithinLimit("mailbox_limit");
+  const teamRole = useTeamRole(teamId);
+  const canManageInvites = teamRole === "OWNER" || teamRole === "ADMIN";
   const [accounts, setAccounts] = useState<EmailAccount[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -84,6 +88,8 @@ export default function TeamEmailAccountsPage() {
       />
 
       {actionError && <p className="text-sm text-destructive">{actionError}</p>}
+
+      {canManageInvites && <MailboxInvitePanel teamId={teamId} />}
 
       {isLoading ? (
         <LoadingState />
@@ -155,6 +161,19 @@ function ErrorCard({ message }: { message: string }) {
       </CardContent>
     </Card>
   );
+}
+
+function useTeamRole(teamId: string): TeamRole | null {
+  const [role, setRole] = useState<TeamRole | null>(null);
+  useEffect(() => {
+    if (!teamId) return;
+    let cancelled = false;
+    getTeam(teamId)
+      .then((team) => { if (!cancelled) setRole(team.role); })
+      .catch(() => { if (!cancelled) setRole(null); });
+    return () => { cancelled = true; };
+  }, [teamId]);
+  return role;
 }
 
 function EmptyState({ canConnect }: { canConnect: boolean }) {

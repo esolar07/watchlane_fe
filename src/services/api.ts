@@ -22,6 +22,11 @@ import {
 } from "@/types/workspace";
 import { Entitlements } from "@/types/entitlements";
 import {
+  MailboxInvite,
+  MailboxInviteRecord,
+  CreateMailboxInviteResult,
+} from "@/types/mailbox-invite";
+import {
   WORKSPACE_HEADER_NAME,
   TEAM_HEADER_NAME,
   getActiveWorkspaceId,
@@ -312,6 +317,37 @@ export function removeWorkspaceMember(memberId: string): Promise<void> {
     method: "DELETE",
     scope: "workspace",
   });
+}
+
+interface CreateMailboxInviteRaw {
+  invite: MailboxInviteRecord;
+  url: string;
+  emailed: boolean;
+}
+
+export async function createMailboxInvite(
+  teamId: string,
+  sendToEmail?: string,
+): Promise<CreateMailboxInviteResult> {
+  const path = `/api/teams/${teamId}/mailbox-invites`;
+  const body = sendToEmail ? { sendToEmail } : {};
+  const raw = await apiRequest<CreateMailboxInviteRaw>(path, {
+    method: "POST", scope: "team", teamId, body,
+  });
+  return { invite: { ...raw.invite, url: raw.url }, emailed: raw.emailed };
+}
+
+export async function listMailboxInvites(teamId: string): Promise<MailboxInvite[]> {
+  const path = `/api/teams/${teamId}/mailbox-invites`;
+  const raw = await apiRequest<{ invites: MailboxInvite[] }>(path, {
+    scope: "team", teamId,
+  });
+  return raw.invites ?? [];
+}
+
+export function revokeMailboxInvite(teamId: string, inviteId: string): Promise<void> {
+  const path = `/api/teams/${teamId}/mailbox-invites/${inviteId}`;
+  return apiRequest<void>(path, { method: "DELETE", scope: "team", teamId });
 }
 
 export async function getEntitlements(): Promise<Entitlements> {
