@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -15,13 +15,27 @@ import {
 import { useAuth } from "@/components/AuthProvider";
 import { getAuthUrls } from "@/services/api";
 
+// OAuth failures redirect here as /login?error=<reason>; searchParams.get() returns it URL-decoded.
+function describeOAuthError(reason: string | null): string {
+  return reason ? `Microsoft sign-in or mailbox connection failed: ${reason}` : "";
+}
+
 export default function LoginPage() {
+  return (
+    <Suspense fallback={null}>
+      <LoginContent />
+    </Suspense>
+  );
+}
+
+function LoginContent() {
+  const oauthError = describeOAuthError(useSearchParams().get("error"));
   const { isAuthenticated, isLoading: authLoading } = useAuth();
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const shouldRedirect = !authLoading && isAuthenticated;
+  const shouldRedirect = !authLoading && isAuthenticated && !oauthError;
 
   useEffect(() => {
     if (shouldRedirect) router.replace("/dashboard");
@@ -66,10 +80,16 @@ export default function LoginPage() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {error && (
-                <div className="rounded-lg bg-destructive/10 px-4 py-3 text-sm text-destructive">
-                  {error}
+              {(error || oauthError) && (
+                <div role="alert" className="break-words rounded-lg bg-destructive/10 px-4 py-3 text-sm text-destructive">
+                  {error || oauthError}
                 </div>
+              )}
+
+              {isAuthenticated && oauthError && (
+                <Button asChild variant="outline" className="w-full">
+                  <Link href="/teams">Back to teams</Link>
+                </Button>
               )}
 
               <Button

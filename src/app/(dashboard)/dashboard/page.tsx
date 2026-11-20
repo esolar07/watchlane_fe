@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import {
   AlertOctagon,
@@ -11,6 +11,7 @@ import {
   Clock,
   Inbox,
   Lock,
+  Mail,
   RefreshCw,
   ShieldAlert,
   Timer,
@@ -28,18 +29,17 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { getTeams } from "@/services/api";
 import { useAggregateDashboard } from "@/hooks/useAggregateDashboard";
 import {
   useAllOperationalDashboards,
   type OperationalEntry,
 } from "@/hooks/useAllOperationalDashboards";
 import { useEntitlements } from "@/hooks/useEntitlements";
+import { useWorkspaceMailboxes, workspaceHasNoMailboxes } from "@/hooks/useWorkspaceMailboxes";
 import { Metric, complianceColor } from "@/components/coverage-metrics";
 import { SnapshotBreakdown } from "@/components/snapshot-breakdown";
 import { cn, formatMinutes } from "@/lib/utils";
 import type { AggregateDashboard } from "@/types/dashboard";
-import type { Team } from "@/types/team";
 
 type DatePreset = "today" | "7d" | "30d" | "90d";
 
@@ -62,14 +62,7 @@ function getDateRange(preset: DatePreset) {
 }
 
 export default function DashboardPage() {
-  const [teams, setTeams] = useState<{ id: string; name: string }[]>([]);
-  const [teamsLoading, setTeamsLoading] = useState(true);
-  useEffect(() => {
-    getTeams()
-      .then((rows) => setTeams(rows.map((row) => ({ id: row.id, name: row.name }))))
-      .catch(() => setTeams([]))
-      .finally(() => setTeamsLoading(false));
-  }, []);
+  const { teams, mailboxCounts, isLoading: teamsLoading } = useWorkspaceMailboxes();
   const [datePreset, setDatePreset] = useState<DatePreset>("7d");
   const { startDate, endDate } = useMemo(
     () => getDateRange(datePreset),
@@ -98,6 +91,8 @@ export default function DashboardPage() {
         <LoadingState />
       ) : teams.length === 0 ? (
         <EmptyOrgsState />
+      ) : workspaceHasNoMailboxes(mailboxCounts) ? (
+        <NoMailboxState />
       ) : aggregate.error ? (
         <ErrorBanner message={aggregate.error} />
       ) : aggregate.data ? (
@@ -231,6 +226,18 @@ function EmptyOrgsState() {
         <p className="text-sm text-muted-foreground">
           Create or join an team to see live activity here.
         </p>
+      </CardContent>
+    </Card>
+  );
+}
+
+function NoMailboxState() {
+  return (
+    <Card>
+      <CardContent className="flex flex-col items-center gap-3 py-16 text-center">
+        <Mail className="h-6 w-6 text-muted-foreground" />
+        <h3 className="text-sm font-medium">Connect a mailbox to start monitoring</h3>
+        <Button asChild size="sm"><Link href="/teams">Connect mailbox</Link></Button>
       </CardContent>
     </Card>
   );

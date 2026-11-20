@@ -14,9 +14,9 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { TeamTabNav } from "@/components/team-tab-nav";
-import { getEmailAccounts, getAuthMailboxUrl, getTeam } from "@/services/api";
+import { getEmailAccounts, getTeam } from "@/services/api";
 import { useEntitlements } from "@/hooks/useEntitlements";
-import { isLimitReachedError } from "@/lib/errors";
+import { useConnectMailbox } from "@/hooks/useConnectMailbox";
 import { MailboxInvitePanel } from "@/components/MailboxInvitePanel";
 import type { EmailAccount } from "@/types/email-account";
 import type { TeamRole } from "@/types/team";
@@ -31,13 +31,12 @@ export default function TeamEmailAccountsPage() {
   const [accounts, setAccounts] = useState<EmailAccount[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [actionError, setActionError] = useState<string | null>(null);
-  const [connecting, setConnecting] = useState(false);
+  const { connectingTeamId, connectError, connectMailbox } = useConnectMailbox();
+  const connecting = connectingTeamId === teamId;
 
   useEffect(() => {
     if (!teamId) return;
     let cancelled = false;
-    setIsLoading(true);
     getEmailAccounts(teamId)
       .then((rows) => {
         if (cancelled) return;
@@ -56,30 +55,13 @@ export default function TeamEmailAccountsPage() {
     };
   }, [teamId]);
 
-  async function handleConnect() {
-    setActionError(null);
-    setConnecting(true);
-    try {
-      const { url } = await getAuthMailboxUrl("microsoft", teamId);
-      window.location.href = url;
-    } catch (caught) {
-      setConnecting(false);
-      if (isLimitReachedError(caught)) {
-        const body = caught.body;
-        setActionError(`You've used ${body.current ?? "all"} of ${body.limit ?? "your"} mailboxes.`);
-      } else {
-        setActionError(caught instanceof Error ? caught.message : "Failed to start connection.");
-      }
-    }
-  }
-
   return (
     <div className="space-y-4">
       <TeamTabNav
         teamId={teamId}
         rightSlot={
           canConnect ? (
-            <Button size="sm" disabled={connecting} onClick={handleConnect}>
+            <Button size="sm" disabled={connecting} onClick={() => connectMailbox(teamId)}>
               <Plus className="mr-2 h-4 w-4" />
               {connecting ? "Connecting…" : "Connect mailbox"}
             </Button>
@@ -87,7 +69,7 @@ export default function TeamEmailAccountsPage() {
         }
       />
 
-      {actionError && <p className="text-sm text-destructive">{actionError}</p>}
+      {connectError && <p className="text-sm text-destructive">{connectError}</p>}
 
       {canManageInvites && <MailboxInvitePanel teamId={teamId} />}
 
@@ -183,7 +165,7 @@ function EmptyState({ canConnect }: { canConnect: boolean }) {
         <div className="flex h-12 w-12 items-center justify-center rounded-full bg-muted">
           <Mail className="h-6 w-6 text-muted-foreground" />
         </div>
-        <h3 className="text-sm font-medium">No mailboxes connected</h3>
+        <h3 className="text-sm font-medium">No mailbox connected</h3>
         <p className="text-sm text-muted-foreground">
           {canConnect
             ? "Connect an Outlook mailbox to start tracking coverage."

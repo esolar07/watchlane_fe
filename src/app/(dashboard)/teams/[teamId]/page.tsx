@@ -406,14 +406,20 @@ export default function OrganizationSettingsPage() {
                       </div>
                       <div className="flex items-center gap-2 shrink-0 ml-3">
                         {member.mailboxConnected ? (
-                          <span className="inline-flex items-center gap-1 rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700 dark:bg-green-900/30 dark:text-green-400">
+                          <span
+                            title="This member connected their own mailbox"
+                            className="inline-flex items-center gap-1 rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700 dark:bg-green-900/30 dark:text-green-400"
+                          >
                             <Mail className="h-3 w-3" />
-                            Connected
+                            Own mailbox connected
                           </span>
                         ) : (
-                          <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
+                          <span
+                            title="This member hasn't connected their own mailbox. Mailboxes added via invite link are listed under Email accounts."
+                            className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground"
+                          >
                             <MailX className="h-3 w-3" />
-                            Not connected
+                            No own mailbox
                           </span>
                         )}
                         <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">

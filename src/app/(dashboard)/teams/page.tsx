@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type FormEvent } from "react";
+import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { Building2, Plus, Mail, Clock, ChevronRight } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
@@ -20,11 +20,12 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { getTeams, createTeam, getAuthMailboxUrl } from "@/services/api";
+import { createTeam } from "@/services/api";
 import { useWorkspace } from "@/hooks/useWorkspace";
 import { useEntitlements } from "@/hooks/useEntitlements";
+import { useWorkspaceMailboxes } from "@/hooks/useWorkspaceMailboxes";
+import { useConnectMailbox } from "@/hooks/useConnectMailbox";
 import { isLimitReachedError } from "@/lib/errors";
-import type { TeamDetail } from "@/types/team";
 
 function formatRelativeTime(dateString: string): string {
   const then = new Date(dateString).getTime();
@@ -57,23 +58,14 @@ export default function TeamsPage() {
   const teamLimitAvailable = isWithinLimit("team_limit");
   const mailboxLimitAvailable = isWithinLimit("mailbox_limit");
   const showCreateButton = canManageWorkspace && teamLimitAvailable;
-  const [teams, setTeams] = useState<TeamDetail[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const { teams, mailboxCounts, isLoading, refetch: refetchTeams } = useWorkspaceMailboxes();
+  const { connectingTeamId, connectError, connectMailbox } = useConnectMailbox();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [name, setName] = useState("");
   const [slaEnabled, setSlaEnabled] = useState(true);
   const [slaMinutes, setSlaMinutes] = useState(120);
   const [error, setError] = useState("");
-  const [connectError, setConnectError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [connectingTeamId, setConnectingTeamId] = useState<string | null>(null);
-
-  useEffect(() => {
-    getTeams()
-      .then(setTeams)
-      .catch(() => setTeams([]))
-      .finally(() => setIsLoading(false));
-  }, []);
 
   async function handleCreate(submitEvent: FormEvent) {
     submitEvent.preventDefault();
@@ -85,7 +77,7 @@ export default function TeamsPage() {
     setError("");
     setIsSubmitting(true);
     try {
-      const newTeam = await createTeam({
+      await createTeam({
         name: trimmed,
         role: "OWNER",
         settings: {
@@ -96,7 +88,7 @@ export default function TeamsPage() {
           notifyOnBreach: false,
         },
       });
-      setTeams((prev) => [...prev, { ...newTeam, createdAt: new Date().toISOString() }]);
+      refetchTeams();
       setName("");
       setSlaEnabled(true);
       setSlaMinutes(120);
@@ -110,22 +102,6 @@ export default function TeamsPage() {
       }
     } finally {
       setIsSubmitting(false);
-    }
-  }
-
-  async function handleConnectMailbox(teamId: string) {
-    setConnectError(null);
-    setConnectingTeamId(teamId);
-    try {
-      const { url } = await getAuthMailboxUrl("microsoft", teamId);
-      window.location.href = url;
-    } catch (caught) {
-      setConnectingTeamId(null);
-      if (isLimitReachedError(caught)) {
-        setConnectError(formatLimitReached(caught.body));
-      } else {
-        setConnectError(caught instanceof Error ? caught.message : "Failed to start connection.");
-      }
     }
   }
 
@@ -206,7 +182,6 @@ export default function TeamsPage() {
         {teams.map((team) => {
           const memberCount = team.memberCount ?? team.members?.length;
           const hasStats = Boolean(team.coverage) || Boolean(team.lastActivityAt);
-          const isConnecting = connectingTeamId === team.id;
           return (
             <Card key={team.id} className="gap-0 py-5 transition-shadow hover:shadow-md">
               <CardContent className="flex flex-col gap-4 px-5">
@@ -224,37 +199,12 @@ export default function TeamsPage() {
                   </div>
                 </div>
 
-                {team.mailboxConnected ? (
-                  <span className="inline-flex items-center gap-1.5 text-xs font-medium text-green-600 dark:text-green-400">
-                    <span className="h-2 w-2 rounded-full bg-green-500" />
-                    Mailbox connected
-                  </span>
-                ) : mailboxLimitAvailable ? (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="w-full"
-                    disabled={isConnecting}
-                    onClick={() => handleConnectMailbox(team.id)}
-                  >
-                    {isConnecting ? (
-                      <span className="flex items-center gap-2">
-                        <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                        Connecting...
-                      </span>
-                    ) : (
-                      <span className="flex items-center gap-2">
-                        <Mail className="h-4 w-4" />
-                        Connect mailbox
-                      </span>
-                    )}
-                  </Button>
-                ) : (
-                  <span className="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
-                    <span className="h-2 w-2 rounded-full bg-muted-foreground/40" />
-                    Mailbox not connected
-                  </span>
-                )}
+                <TeamMailboxStatus
+                  mailboxCount={mailboxCounts[team.id] ?? null}
+                  canConnect={mailboxLimitAvailable}
+                  isConnecting={connectingTeamId === team.id}
+                  onConnect={() => connectMailbox(team.id)}
+                />
 
                 {hasStats && (
                   <div className="grid grid-cols-2 gap-4 rounded-lg border bg-muted/30 px-4 py-3">
@@ -295,6 +245,46 @@ export default function TeamsPage() {
         })}
       </div>
     </div>
+  );
+}
+
+interface TeamMailboxStatusProps {
+  mailboxCount: number | null;
+  canConnect: boolean;
+  isConnecting: boolean;
+  onConnect: () => void;
+}
+
+function StatusDot({ className, label }: { className: string; label: string }) {
+  return (
+    <span className="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+      <span className={`h-2 w-2 rounded-full ${className}`} />
+      {label}
+    </span>
+  );
+}
+
+function TeamMailboxStatus({ mailboxCount, canConnect, isConnecting, onConnect }: TeamMailboxStatusProps) {
+  if (mailboxCount === null) return <StatusDot className="bg-muted-foreground/40" label="Mailbox status unavailable" />;
+  if (mailboxCount > 0) return <StatusDot className="bg-green-500" label={formatMailboxCount(mailboxCount)} />;
+  return (
+    <div className="flex flex-col gap-2">
+      <StatusDot className="bg-amber-500" label="No mailbox connected" />
+      {canConnect && <ConnectMailboxButton isConnecting={isConnecting} onConnect={onConnect} />}
+    </div>
+  );
+}
+
+function formatMailboxCount(count: number): string {
+  return `${count} ${count === 1 ? "mailbox" : "mailboxes"} connected`;
+}
+
+function ConnectMailboxButton({ isConnecting, onConnect }: { isConnecting: boolean; onConnect: () => void }) {
+  return (
+    <Button variant="outline" size="sm" className="w-full" disabled={isConnecting} onClick={onConnect}>
+      <Mail className="mr-2 h-4 w-4" />
+      {isConnecting ? "Connecting..." : "Connect mailbox"}
+    </Button>
   );
 }
 
